@@ -1,0 +1,191 @@
+import { SpotifyTokens, SpotifyCurrentlyPlaying } from '../types';
+
+const CLIENT_ID = '7a03306f3ef744b29ce0d9d6c33a812a';
+const REDIRECT_URI = import.meta.env.PROD 
+  ? 'https://notka-mvp.web.app/callback' 
+  : 'http://127.0.0.1:5173/callback';
+const SCOPES = [
+  'user-read-currently-playing',
+  'user-read-recently-played',
+  'user-read-playback-state',
+  'user-read-private',
+  'user-read-email'
+].join(' ');
+
+// PKCE helpers
+function generateRandomString(length: number): string {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const values = crypto.getRandomValues(new Uint8Array(length));
+  return values.reduce((acc, x) => acc + possible[x % possible.length], '');
+}
+
+async function sha256(plain: string): Promise<ArrayBuffer> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return crypto.subtle.digest('SHA-256', data);
+}
+
+function base64encode(input: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(input)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+// Auth functions
+export async function initiateSpotifyLogin(): Promise<void> {
+  const codeVerifier = generateRandomString(64);
+  const hashed = await sha256(codeVerifier);
+  const codeChallenge = base64encode(hashed);
+  
+  localStorage.setItem('code_verifier', codeVerifier);
+  
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    redirect_uri: REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+  });
+  
+  window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+
+export async function exchangeCodeForTokens(code: string): Promise<SpotifyTokens> {
+  const codeVerifier = localStorage.getItem('code_verifier');
+  if (!codeVerifier) {
+    throw new Error('Code verifier not found');
+  }
+  
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: CLIENT_ID,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: codeVerifier,
+    }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to exchange code for tokens');
+  }
+  
+  const data = await response.json();
+  localStorage.removeItem('code_verifier');
+  
+  const tokens: SpotifyTokens = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
+  
+  saveTokens(tokens);
+  return tokens;
+}
+
+export async function refreshAccessToken(): Promise<SpotifyTokens | null> {
+  const tokens = getTokens();
+  if (!tokens?.refreshToken) return null;
+  
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: CLIENT_ID,
+      grant_type: 'refresh_token',
+      refresh_token: tokens.refreshToken,
+    }),
+  });
+  
+  if (!response.ok) {
+    clearTokens();
+    return null;
+  }
+  
+  const data = await response.json();
+  const newTokens: SpotifyTokens = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || tokens.refreshToken,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
+  
+  saveTokens(newTokens);
+  return newTokens;
+}
+
+// Token storage
+export function saveTokens(tokens: SpotifyTokens): void {
+  localStorage.setItem('spotify_tokens', JSON.stringify(tokens));
+}
+
+export function getTokens(): SpotifyTokens | null {
+  const stored = localStorage.getItem('spotify_tokens');
+  return stored ? JSON.parse(stored) : null;
+}
+
+export function clearTokens(): void {
+  localStorage.removeItem('spotify_tokens');
+}
+
+// Get valid access token (auto-refresh if needed)
+export async function getValidAccessToken(): Promise<string | null> {
+  let tokens = getTokens();
+  if (!tokens) return null;
+  
+  // Refresh if expires in less than 5 minutes
+  if (tokens.expiresAt < Date.now() + 5 * 60 * 1000) {
+    tokens = await refreshAccessToken();
+    if (!tokens) return null;
+  }
+  
+  return tokens.accessToken;
+}
+
+// Spotify API calls
+export async function getCurrentUser(): Promise<{ id: string; display_name: string; images: { url: string }[] } | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+  
+  const response = await fetch('https://api.spotify.com/v1/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  
+  if (!response.ok) return null;
+  return response.json();
+}
+
+export async function getCurrentlyPlaying(): Promise<SpotifyCurrentlyPlaying | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+  
+  const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  
+  if (response.status === 204) {
+    return { is_playing: false, item: null, progress_ms: 0 };
+  }
+  
+  if (!response.ok) return null;
+  return response.json();
+}
+
+export async function getRecentlyPlayed(limit = 20): Promise<{ items: { track: SpotifyCurrentlyPlaying['item']; played_at: string }[] } | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+  
+  const response = await fetch(`https://api.spotify.com/v1/me/player/recently-played?limit=${limit}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  
+  if (!response.ok) return null;
+  return response.json();
+}
