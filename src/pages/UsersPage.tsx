@@ -12,13 +12,14 @@ export function UsersPage() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [spotifyId]);
 
   const loadUsers = async () => {
     try {
       const data = await getAllUsers(50);
-      // Filter out current user
-      setUsers(data.filter(u => u.odl !== spotifyId));
+      // Show all users except current user
+      const filtered = data.filter(u => u.odl !== spotifyId);
+      setUsers(filtered);
     } catch (error) {
       console.error('Error loading users:', error);
     } finally {
@@ -42,6 +43,9 @@ export function UsersPage() {
         <div className="empty-state">
           <div className="empty-state-icon">👥</div>
           <p>Пока никого нет. Пригласи друзей!</p>
+          <p style={{ fontSize: 14, marginTop: 8, opacity: 0.7 }}>
+            Отправь им ссылку: notka-mvp.web.app
+          </p>
         </div>
       ) : (
         <div className="users-grid">
@@ -52,7 +56,7 @@ export function UsersPage() {
               className="user-card"
             >
               <img 
-                src={user.avatarURL || '/default-avatar.png'} 
+                src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23333"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>'} 
                 alt={user.name}
                 className="user-avatar"
                 onError={(e) => {
@@ -61,10 +65,14 @@ export function UsersPage() {
               />
               <div className="user-info">
                 <div className="user-name">{user.name}</div>
-                {user.currentTrack && (
+                {user.currentTrack ? (
                   <div className="user-listening">
                     <span className="now-playing-pulse" />
-                    {user.currentTrack.trackName}
+                    {user.currentTrack.trackName} — {user.currentTrack.artistName}
+                  </div>
+                ) : (
+                  <div className="user-listening" style={{ opacity: 0.5 }}>
+                    Не слушает
                   </div>
                 )}
               </div>

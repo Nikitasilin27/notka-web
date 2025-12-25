@@ -70,8 +70,30 @@ export async function updateCurrentTrack(
 }
 
 // Scrobble operations - совместимы с iOS структурой
-export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<string> {
+export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<string | null> {
+  // Check for duplicate first (same user, same track, within last 3 minutes)
+  const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
   const scrobblesRef = collection(db, 'scrobbles');
+  
+  try {
+    const duplicateCheck = query(
+      scrobblesRef,
+      where('odl', '==', scrobble.odl),
+      where('trackId', '==', scrobble.trackId),
+      where('timestamp', '>=', Timestamp.fromDate(threeMinutesAgo)),
+      limit(1)
+    );
+    
+    const existing = await getDocs(duplicateCheck);
+    if (!existing.empty) {
+      console.log('Duplicate scrobble prevented:', scrobble.title);
+      return null; // Already scrobbled recently
+    }
+  } catch (e) {
+    // Index might not exist, continue with scrobble
+    console.log('Duplicate check skipped (index missing)');
+  }
+  
   const docRef = await addDoc(scrobblesRef, {
     // Сохраняем в формате iOS
     title: scrobble.title,

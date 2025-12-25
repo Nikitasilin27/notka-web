@@ -71,8 +71,10 @@ export function useScrobbler(): UseScrobblerReturn {
       };
 
       const id = await addScrobble(scrobble);
-      setLastScrobble({ ...scrobble, id });
-      console.log('✓ Scrobbled:', track.name);
+      if (id) {
+        setLastScrobble({ ...scrobble, id });
+        console.log('✓ Scrobbled:', track.name);
+      }
     } catch (err) {
       console.error('Scrobble failed:', err);
     } finally {
