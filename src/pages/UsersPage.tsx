@@ -48,32 +48,56 @@ export function UsersPage() {
           </p>
         </div>
       ) : (
-        <div className="users-grid">
+        <div className="listeners-list">
           {users.map((user) => (
             <Link 
               key={user.odl} 
               to={`/profile/${user.odl}`}
-              className="user-card"
+              className="listener-card"
             >
-              <img 
-                src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23333"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>'} 
-                alt={user.name}
-                className="user-avatar"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23333"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>';
-                }}
-              />
-              <div className="user-info">
-                <div className="user-name">{user.name}</div>
-                {user.currentTrack ? (
-                  <div className="user-listening">
-                    <span className="now-playing-pulse" />
-                    {user.currentTrack.trackName} — {user.currentTrack.artistName}
-                  </div>
-                ) : (
-                  <div className="user-listening" style={{ opacity: 0.5 }}>
-                    Не слушает
-                  </div>
+              {/* Background blur from album art */}
+              {user.currentTrack?.albumArtURL && (
+                <div 
+                  className="listener-card-bg"
+                  style={{ backgroundImage: `url(${user.currentTrack.albumArtURL})` }}
+                />
+              )}
+              
+              <div className="listener-card-content">
+                <img 
+                  src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23555"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>'} 
+                  alt={user.name}
+                  className="listener-avatar"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23555"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>';
+                  }}
+                />
+                
+                <div className="listener-info">
+                  <div className="listener-name">{user.name}</div>
+                  {user.currentTrack ? (
+                    <div className="listener-track">
+                      <span className="listener-pulse" />
+                      <span className="listener-track-name">
+                        {user.currentTrack.trackName}
+                      </span>
+                      <span className="listener-artist">
+                        {user.currentTrack.artistName}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="listener-offline">
+                      Не в сети
+                    </div>
+                  )}
+                </div>
+
+                {user.currentTrack?.albumArtURL && (
+                  <img 
+                    src={user.currentTrack.albumArtURL}
+                    alt=""
+                    className="listener-album-art"
+                  />
                 )}
               </div>
             </Link>

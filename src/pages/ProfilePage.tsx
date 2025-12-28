@@ -56,18 +56,21 @@ export function ProfilePage() {
     return date.toLocaleDateString('ru-RU');
   };
 
-  // Get last listened info from most recent scrobble
-  const getLastListened = () => {
-    if (scrobbles.length === 0) return null;
-    const lastScrobble = scrobbles[0];
+  // Calculate stats
+  const getStats = () => {
+    const uniqueArtists = new Set(scrobbles.map(s => s.artist)).size;
+    const uniqueTracks = new Set(scrobbles.map(s => `${s.artist}-${s.title}`)).size;
     return {
-      track: lastScrobble.title,
-      artist: lastScrobble.artist,
-      time: formatTime(lastScrobble.timestamp)
+      scrobbles: scrobbles.length,
+      artists: uniqueArtists,
+      tracks: uniqueTracks
     };
   };
 
-  const lastListened = getLastListened();
+  const stats = getStats();
+
+  // Get last scrobble for "now playing" style display
+  const lastScrobble = scrobbles.length > 0 ? scrobbles[0] : null;
 
   if (isLoading) {
     return (
@@ -88,34 +91,55 @@ export function ProfilePage() {
 
   return (
     <div className="profile-page">
-      <div className="profile-header">
-        <img 
-          src={user.avatarURL || '/default-avatar.png'} 
-          alt={user.name}
-          className="profile-avatar"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23333"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>';
-          }}
-        />
-        <div className="profile-info">
-          <h1 className="profile-name">{user.name}</h1>
+      {/* Hero Header like Last.fm */}
+      <div className="profile-hero">
+        {/* Background blur from last track */}
+        {lastScrobble?.albumArtURL && (
+          <div 
+            className="profile-hero-bg"
+            style={{ backgroundImage: `url(${lastScrobble.albumArtURL})` }}
+          />
+        )}
+        
+        <div className="profile-hero-content">
+          <img 
+            src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23555"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>'} 
+            alt={user.name}
+            className="profile-hero-avatar"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23555"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="40">👤</text></svg>';
+            }}
+          />
           
-          {lastListened && (
-            <div className="profile-last-listened">
-              {lastListened.track} — {lastListened.artist}
-              <span className="profile-last-listened-time">{lastListened.time}</span>
-            </div>
-          )}
-          
-          <div className="profile-stats">
-            <div className="profile-stat">
-              <div className="profile-stat-value">{scrobbles.length}</div>
-              <div className="profile-stat-label">скробблов</div>
+          <div className="profile-hero-info">
+            <h1 className="profile-hero-name">{user.name}</h1>
+            
+            {lastScrobble && (
+              <div className="profile-hero-listening">
+                {lastScrobble.title} — {lastScrobble.artist}
+                <span className="profile-hero-time">{formatTime(lastScrobble.timestamp)}</span>
+              </div>
+            )}
+            
+            <div className="profile-hero-stats">
+              <div className="profile-hero-stat">
+                <div className="profile-hero-stat-value">{stats.scrobbles}</div>
+                <div className="profile-hero-stat-label">скробблов</div>
+              </div>
+              <div className="profile-hero-stat">
+                <div className="profile-hero-stat-value">{stats.artists}</div>
+                <div className="profile-hero-stat-label">исполнителей</div>
+              </div>
+              <div className="profile-hero-stat">
+                <div className="profile-hero-stat-value">{stats.tracks}</div>
+                <div className="profile-hero-stat-label">треков</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Settings section for own profile */}
       {isOwnProfile && (
         <div className="section">
           <h2 className="section-title">Настройки</h2>
@@ -135,8 +159,9 @@ export function ProfilePage() {
         </div>
       )}
 
+      {/* Recent tracks */}
       <div className="section">
-        <h2 className="section-title">История прослушиваний</h2>
+        <h2 className="section-title">Последние треки</h2>
         
         {scrobbles.length === 0 ? (
           <div className="empty-state">
