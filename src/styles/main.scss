@@ -690,6 +690,113 @@ body {
   letter-spacing: 0.5px;
 }
 
+// Profile content - Two column layout like Last.fm
+.profile-content {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--spacing-6); // 24px
+}
+
+@media (max-width: 900px) {
+  .profile-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-sidebar {
+    order: -1; // Show top artists first on mobile
+  }
+}
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6); // 24px
+}
+
+.profile-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4); // 16px
+}
+
+// Top artists card
+.top-artists-card {
+  padding: var(--spacing-4) !important; // 16px
+}
+
+.top-artists-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: var(--spacing-4); // 16px
+}
+
+.top-artists-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2); // 8px
+}
+
+.top-artist-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3); // 12px
+  padding: var(--spacing-2); // 8px
+  border-radius: var(--g-border-radius-s);
+  transition: background 0.2s;
+  
+  &:hover {
+    background: var(--g-color-base-simple-hover);
+  }
+}
+
+.top-artist-rank {
+  width: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--g-color-text-hint);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.top-artist-image {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--g-border-radius-s);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.top-artist-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--g-color-base-generic);
+  font-size: 20px;
+}
+
+.top-artist-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.top-artist-name {
+  font-weight: 500;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-artist-count {
+  font-size: 13px;
+  color: var(--g-color-text-secondary);
+}
+
+// Show more button
+.show-more-button {
+  margin-top: var(--spacing-4); // 16px
+}
+
 // Empty state
 .empty-state {
   display: flex;

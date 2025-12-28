@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Switch, Button, RadioGroup, Radio } from '@gravity-ui/uikit';
+import { Loader, Switch, Button, RadioGroup, Radio, Card } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { Moon, Sun, Globe, PersonPlus, PersonXmark } from '@gravity-ui/icons';
+import { Moon, Sun, Globe, PersonPlus, PersonXmark, ChevronRight } from '@gravity-ui/icons';
 import { 
   getUser, 
   getUserScrobbles, 
@@ -17,6 +17,12 @@ import { useTheme } from '../hooks/useTheme';
 import { useI18n, formatTimeI18n, Language } from '../hooks/useI18n';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 
+interface TopArtist {
+  name: string;
+  count: number;
+  imageUrl?: string;
+}
+
 export function ProfilePage() {
   const { odl } = useParams<{ odl: string }>();
   const { spotifyId } = useAuth();
@@ -24,10 +30,12 @@ export function ProfilePage() {
   const { t, lang, setLang } = useI18n();
   const [user, setUser] = useState<User | null>(null);
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
+  const [allScrobbles, setAllScrobbles] = useState<Scrobble[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [followStatus, setFollowStatus] = useState(false);
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [showAllScrobbles, setShowAllScrobbles] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -43,15 +51,15 @@ export function ProfilePage() {
     try {
       const [userData, scrobblesData, counts] = await Promise.all([
         getUser(targetOdl),
-        getUserScrobbles(targetOdl, 30),
+        getUserScrobbles(targetOdl, 100), // Get more for top artists
         getFollowCounts(targetOdl)
       ]);
       
       setUser(userData);
-      setScrobbles(scrobblesData);
+      setAllScrobbles(scrobblesData);
+      setScrobbles(scrobblesData.slice(0, 10));
       setFollowCounts(counts);
       
-      // Check if current user follows this profile
       if (spotifyId && targetOdl && spotifyId !== targetOdl) {
         const following = await isFollowing(spotifyId, targetOdl);
         setFollowStatus(following);
@@ -84,19 +92,36 @@ export function ProfilePage() {
     }
   };
 
-  // Calculate stats
-  const getStats = () => {
-    const uniqueArtists = new Set(scrobbles.map(s => s.artist)).size;
-    const uniqueTracks = new Set(scrobbles.map(s => `${s.artist}-${s.title}`)).size;
-    return {
-      scrobbles: scrobbles.length,
-      artists: uniqueArtists,
-      tracks: uniqueTracks
-    };
+  // Calculate top artists from scrobbles
+  const getTopArtists = (): TopArtist[] => {
+    const artistMap = new Map<string, { count: number; imageUrl?: string }>();
+    
+    allScrobbles.forEach(scrobble => {
+      const existing = artistMap.get(scrobble.artist);
+      if (existing) {
+        existing.count++;
+      } else {
+        artistMap.set(scrobble.artist, {
+          count: 1,
+          imageUrl: scrobble.albumArtURL // Use album art as artist image
+        });
+      }
+    });
+    
+    return Array.from(artistMap.entries())
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8); // Top 8 artists
   };
 
-  const stats = getStats();
+  const topArtists = getTopArtists();
   const lastScrobble = scrobbles.length > 0 ? scrobbles[0] : null;
+  
+  const stats = {
+    scrobbles: allScrobbles.length,
+    artists: new Set(allScrobbles.map(s => s.artist)).size,
+    tracks: new Set(allScrobbles.map(s => `${s.artist}-${s.title}`)).size
+  };
 
   if (isLoading) {
     return (
@@ -178,76 +203,132 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* Settings section for own profile */}
-      {isOwnProfile && (
-        <div className="section">
-          <h2 className="section-title">{t.settings}</h2>
-          <div className="settings-list">
-            {/* Theme toggle */}
-            <div className="settings-item">
-              <div className="settings-item-info">
-                <Icon data={theme === 'dark' ? Moon : Sun} size={20} />
-                <span>{t.darkTheme}</span>
-              </div>
-              <Switch
-                checked={theme === 'dark'}
-                onUpdate={toggleTheme}
-                size="m"
-              />
-            </div>
+      {/* Main content - Two columns like Last.fm */}
+      <div className="profile-content">
+        {/* Left column - Recent tracks */}
+        <div className="profile-main">
+          <div className="section">
+            <h2 className="section-title">{t.recentTracks}</h2>
             
-            {/* Language selector */}
-            <div className="settings-item settings-item-column">
-              <div className="settings-item-info">
-                <Icon data={Globe} size={20} />
-                <span>{t.language}</span>
+            {scrobbles.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🎧</div>
+                <p>{isOwnProfile ? t.turnOnSpotify : t.noScrobbles}</p>
               </div>
-              <div className="language-selector">
-                <RadioGroup
-                  value={lang}
-                  onUpdate={(value) => setLang(value as Language)}
-                  direction="vertical"
-                >
-                  <Radio value="ru">
-                    <div className="language-option">
-                      <span className="language-name">{t.russian}</span>
-                      <span className="language-native">Русский</span>
-                    </div>
-                  </Radio>
-                  <Radio value="en">
-                    <div className="language-option">
-                      <span className="language-name">{t.english}</span>
-                      <span className="language-native">English</span>
-                    </div>
-                  </Radio>
-                </RadioGroup>
+            ) : (
+              <>
+                <div className="feed">
+                  {(showAllScrobbles ? allScrobbles : scrobbles).map((scrobble) => (
+                    <ScrobbleCard
+                      key={scrobble.id}
+                      scrobble={scrobble}
+                      timeAgo={formatTimeI18n(scrobble.timestamp, t)}
+                      showUser={false}
+                    />
+                  ))}
+                </div>
+                
+                {allScrobbles.length > 10 && !showAllScrobbles && (
+                  <Button
+                    view="flat"
+                    size="l"
+                    width="max"
+                    onClick={() => setShowAllScrobbles(true)}
+                    className="show-more-button"
+                  >
+                    {lang === 'ru' ? 'Показать больше' : 'Show more'}
+                    <Icon data={ChevronRight} size={16} />
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Settings for own profile */}
+          {isOwnProfile && (
+            <div className="section">
+              <h2 className="section-title">{t.settings}</h2>
+              <div className="settings-list">
+                <div className="settings-item">
+                  <div className="settings-item-info">
+                    <Icon data={theme === 'dark' ? Moon : Sun} size={20} />
+                    <span>{t.darkTheme}</span>
+                  </div>
+                  <Switch
+                    checked={theme === 'dark'}
+                    onUpdate={toggleTheme}
+                    size="m"
+                  />
+                </div>
+                
+                <div className="settings-item settings-item-column">
+                  <div className="settings-item-info">
+                    <Icon data={Globe} size={20} />
+                    <span>{t.language}</span>
+                  </div>
+                  <div className="language-selector">
+                    <RadioGroup
+                      value={lang}
+                      onUpdate={(value) => setLang(value as Language)}
+                      direction="vertical"
+                    >
+                      <Radio value="ru">
+                        <div className="language-option">
+                          <span className="language-name">{t.russian}</span>
+                          <span className="language-native">Русский</span>
+                        </div>
+                      </Radio>
+                      <Radio value="en">
+                        <div className="language-option">
+                          <span className="language-name">{t.english}</span>
+                          <span className="language-native">English</span>
+                        </div>
+                      </Radio>
+                    </RadioGroup>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Recent tracks */}
-      <div className="section">
-        <h2 className="section-title">{t.recentTracks}</h2>
-        
-        {scrobbles.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">🎧</div>
-            <p>{isOwnProfile ? t.turnOnSpotify : t.noScrobbles}</p>
-          </div>
-        ) : (
-          <div className="feed">
-            {scrobbles.map((scrobble) => (
-              <ScrobbleCard
-                key={scrobble.id}
-                scrobble={scrobble}
-                timeAgo={formatTimeI18n(scrobble.timestamp, t)}
-                showUser={false}
-              />
-            ))}
-          </div>
-        )}
+        {/* Right column - Top artists */}
+        <div className="profile-sidebar">
+          {topArtists.length > 0 && (
+            <Card className="top-artists-card">
+              <h3 className="top-artists-title">
+                {lang === 'ru' ? 'Топ исполнители' : 'Top Artists'}
+              </h3>
+              <div className="top-artists-grid">
+                {topArtists.map((artist, index) => (
+                  <div key={artist.name} className="top-artist-item">
+                    <div className="top-artist-rank">{index + 1}</div>
+                    {artist.imageUrl ? (
+                      <img 
+                        src={artist.imageUrl} 
+                        alt={artist.name}
+                        className="top-artist-image"
+                      />
+                    ) : (
+                      <div className="top-artist-image top-artist-placeholder">
+                        🎵
+                      </div>
+                    )}
+                    <div className="top-artist-info">
+                      <div className="top-artist-name">{artist.name}</div>
+                      <div className="top-artist-count">
+                        {artist.count} {lang === 'ru' 
+                          ? (artist.count === 1 ? 'прослушивание' : 'прослушиваний')
+                          : (artist.count === 1 ? 'play' : 'plays')
+                        }
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
