@@ -251,6 +251,7 @@ body {
   padding: var(--spacing-4); // 16px
   background: var(--g-color-base-float);
   border-radius: var(--g-border-radius-m);
+  border: 1px solid var(--g-color-line-generic);
 }
 
 @media (max-width: 768px) {
@@ -345,10 +346,12 @@ body {
   padding: var(--spacing-3); // 12px
   background: var(--g-color-base-float);
   border-radius: var(--g-border-radius-m);
-  transition: background 0.2s;
+  border: 1px solid var(--g-color-line-generic);
+  transition: background 0.2s, border-color 0.2s;
   
   &:hover {
     background: var(--g-color-base-float-hover);
+    border-color: var(--g-color-line-generic-hover);
   }
 }
 
@@ -441,13 +444,15 @@ body {
   padding: var(--spacing-4); // 16px
   background: var(--g-color-base-float);
   border-radius: var(--g-border-radius-m);
+  border: 1px solid var(--g-color-line-generic);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
   text-decoration: none;
   color: inherit;
   
   &:hover {
     background: var(--g-color-base-float-hover);
+    border-color: var(--g-color-line-generic-hover);
   }
 }
 
@@ -501,6 +506,7 @@ body {
   padding: var(--spacing-6); // 24px
   background: var(--g-color-base-float);
   border-radius: var(--g-border-radius-l);
+  border: 1px solid var(--g-color-line-generic);
 }
 
 @media (max-width: 768px) {
@@ -661,6 +667,7 @@ body {
   padding: var(--spacing-3) var(--spacing-4); // 12px 16px
   background: var(--g-color-base-float);
   border-radius: var(--g-border-radius-m);
+  border: 1px solid var(--g-color-line-generic);
 }
 
 .settings-item-info {
