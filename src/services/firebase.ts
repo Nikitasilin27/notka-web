@@ -132,35 +132,19 @@ function docToScrobble(doc: any): Scrobble {
 export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Scrobble[]> {
   const scrobblesRef = collection(db, 'scrobbles');
   
-  // Пробуем найти по odl (веб) 
-  let q = query(
+  const q = query(
     scrobblesRef,
-    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(limitCount)
+    limit(200)
   );
   
-  let snapshot = await getDocs(q);
+  const snapshot = await getDocs(q);
   
-  // Если не нашли, ищем по odl в users чтобы получить odl юзера
-  // и затем ищем скробблы
-  if (snapshot.empty) {
-    // Получаем все скробблы и фильтруем (временное решение)
-    const allQ = query(
-      scrobblesRef,
-      orderBy('timestamp', 'desc'),
-      limit(100)
-    );
-    snapshot = await getDocs(allQ);
-    
-    const filtered = snapshot.docs
-      .map(doc => docToScrobble(doc))
-      .filter(s => s.odl === odl);
-    
-    return filtered.slice(0, limitCount);
-  }
+  const userScrobbles = snapshot.docs
+    .map(doc => docToScrobble(doc))
+    .filter(s => s.odl === odl || s.userId === odl);
   
-  return snapshot.docs.map(doc => docToScrobble(doc));
+  return userScrobbles.slice(0, limitCount);
 }
 
 // Check if user recently scrobbled this track (to prevent duplicates)
