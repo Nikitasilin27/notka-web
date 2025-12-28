@@ -9,6 +9,7 @@ import { CallbackPage } from './pages/CallbackPage';
 import { FeedPage } from './pages/FeedPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
 import { Loader } from '@gravity-ui/uikit';
 
 // Custom theme - must be imported AFTER Gravity UI
@@ -100,6 +101,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <ProfilePage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <SettingsPage />
             </AppLayout>
           </ProtectedRoute>
         }

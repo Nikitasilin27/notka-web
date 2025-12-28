@@ -133,9 +133,13 @@ body {
 }
 
 .aside-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1); // 4px
   padding: var(--spacing-2); // 8px
 }
 
+.settings-button,
 .logout-button {
   display: flex;
   align-items: center;
@@ -159,6 +163,11 @@ body {
   &:hover {
     background: var(--g-color-base-simple-hover);
     color: var(--g-color-text-primary);
+  }
+  
+  &.active {
+    color: var(--notka-brand);
+    background: var(--g-color-base-simple-hover);
   }
 }
 
@@ -815,6 +824,51 @@ body {
   margin-top: var(--spacing-4); // 16px
 }
 
+// Settings page
+.settings-page {
+  max-width: 600px;
+}
+
+// Artist dialog styles
+.artist-dialog-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--g-border-radius-s);
+  object-fit: cover;
+  margin-right: var(--spacing-3);
+}
+
+.artist-dialog-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-8); // 32px
+}
+
+.artist-dialog-content {
+  line-height: 1.6;
+}
+
+.artist-dialog-extract {
+  margin: 0 0 var(--spacing-4);
+  color: var(--g-color-text-primary);
+}
+
+.artist-dialog-link {
+  color: var(--notka-brand);
+  text-decoration: none;
+  font-weight: 500;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.artist-dialog-empty {
+  text-align: center;
+  padding: var(--spacing-4);
+  color: var(--g-color-text-secondary);
+}
+
 // Empty state
 .empty-state {
   display: flex;
@@ -902,9 +956,16 @@ body {
   border-radius: var(--g-border-radius-m);
   overflow: hidden;
   
-  // Override Disclosure styles
+  // Override Disclosure styles - chevron on right
   .g-disclosure__summary {
     padding: var(--spacing-3) var(--spacing-4); // 12px 16px
+    flex-direction: row-reverse;
+    justify-content: space-between;
+  }
+  
+  .g-disclosure__arrow {
+    margin-left: auto;
+    margin-right: 0;
   }
 }
 

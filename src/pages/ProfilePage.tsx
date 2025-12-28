@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Switch, Button, RadioGroup, Radio, Disclosure } from '@gravity-ui/uikit';
+import { Loader, Button, Dialog } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { Moon, Sun, Globe, PersonPlus, PersonXmark, ChevronRight } from '@gravity-ui/icons';
+import { PersonPlus, PersonXmark, ChevronRight } from '@gravity-ui/icons';
 import { 
   getUser, 
   getUserScrobbles, 
@@ -12,10 +12,10 @@ import {
   getFollowCounts 
 } from '../services/firebase';
 import { getArtistImages } from '../services/spotify';
+import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
-import { useI18n, formatTimeI18n, Language } from '../hooks/useI18n';
+import { useI18n, formatTimeI18n } from '../hooks/useI18n';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 
 interface TopArtist {
@@ -24,11 +24,26 @@ interface TopArtist {
   imageUrl?: string;
 }
 
+// Normalize artist name - take only first artist (before comma or feat)
+function normalizeArtistName(artist: string): string {
+  // Remove feat., ft., featuring, &, etc.
+  const separators = [',', ' feat.', ' feat ', ' ft.', ' ft ', ' featuring ', ' & ', ' x ', ' X '];
+  let name = artist;
+  
+  for (const sep of separators) {
+    const idx = name.toLowerCase().indexOf(sep.toLowerCase());
+    if (idx > 0) {
+      name = name.substring(0, idx);
+    }
+  }
+  
+  return name.trim();
+}
+
 export function ProfilePage() {
   const { odl } = useParams<{ odl: string }>();
   const { spotifyId } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const { t, lang, setLang } = useI18n();
+  const { t, lang } = useI18n();
   const [user, setUser] = useState<User | null>(null);
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [allScrobbles, setAllScrobbles] = useState<Scrobble[]>([]);
@@ -38,6 +53,11 @@ export function ProfilePage() {
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [showAllScrobbles, setShowAllScrobbles] = useState(false);
+  
+  // Artist dialog state
+  const [selectedArtist, setSelectedArtist] = useState<TopArtist | null>(null);
+  const [artistInfo, setArtistInfo] = useState<WikipediaArtistInfo | null>(null);
+  const [isArtistInfoLoading, setIsArtistInfoLoading] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -62,14 +82,15 @@ export function ProfilePage() {
       setScrobbles(scrobblesData.slice(0, 10));
       setFollowCounts(counts);
       
-      // Calculate top artists
+      // Calculate top artists with normalized names
       const artistMap = new Map<string, { count: number; albumArtUrl?: string }>();
       scrobblesData.forEach(scrobble => {
-        const existing = artistMap.get(scrobble.artist);
+        const normalizedName = normalizeArtistName(scrobble.artist);
+        const existing = artistMap.get(normalizedName);
         if (existing) {
           existing.count++;
         } else {
-          artistMap.set(scrobble.artist, {
+          artistMap.set(normalizedName, {
             count: 1,
             albumArtUrl: scrobble.albumArtURL
           });
@@ -83,7 +104,7 @@ export function ProfilePage() {
       
       setTopArtists(topArtistsList);
       
-      // Fetch artist images from Spotify (async, will update state when done)
+      // Fetch artist images from Spotify
       const artistNames = topArtistsList.map(a => a.name);
       getArtistImages(artistNames).then(imageMap => {
         setTopArtists(prev => prev.map(artist => ({
@@ -124,12 +145,27 @@ export function ProfilePage() {
     }
   };
 
+  const handleArtistClick = async (artist: TopArtist) => {
+    setSelectedArtist(artist);
+    setArtistInfo(null);
+    setIsArtistInfoLoading(true);
+    
+    const info = await getArtistWikipediaInfo(artist.name);
+    setArtistInfo(info);
+    setIsArtistInfoLoading(false);
+  };
+
+  const closeArtistDialog = () => {
+    setSelectedArtist(null);
+    setArtistInfo(null);
+  };
+
   const lastScrobble = scrobbles.length > 0 ? scrobbles[0] : null;
   
   const stats = {
     scrobbles: allScrobbles.length,
-    artists: new Set(allScrobbles.map(s => s.artist)).size,
-    tracks: new Set(allScrobbles.map(s => `${s.artist}-${s.title}`)).size
+    artists: new Set(allScrobbles.map(s => normalizeArtistName(s.artist))).size,
+    tracks: new Set(allScrobbles.map(s => `${normalizeArtistName(s.artist)}-${s.title}`)).size
   };
 
   if (isLoading) {
@@ -252,57 +288,6 @@ export function ProfilePage() {
               </>
             )}
           </div>
-
-          {/* Settings for own profile */}
-          {isOwnProfile && (
-            <div className="section">
-              <h2 className="section-title">{t.settings}</h2>
-              <div className="settings-list">
-                <div className="settings-item">
-                  <div className="settings-item-info">
-                    <Icon data={theme === 'dark' ? Moon : Sun} size={20} />
-                    <span>{t.darkTheme}</span>
-                  </div>
-                  <Switch
-                    checked={theme === 'dark'}
-                    onUpdate={toggleTheme}
-                    size="m"
-                  />
-                </div>
-                
-                <Disclosure
-                  className="language-disclosure"
-                  summary={
-                    <div className="settings-item-info">
-                      <Icon data={Globe} size={20} />
-                      <span>{t.language}</span>
-                    </div>
-                  }
-                >
-                  <div className="language-selector">
-                    <RadioGroup
-                      value={lang}
-                      onUpdate={(value) => setLang(value as Language)}
-                      direction="vertical"
-                    >
-                      <Radio value="ru">
-                        <div className="language-option">
-                          <span className="language-name">Русский</span>
-                          <span className="language-native">Russian</span>
-                        </div>
-                      </Radio>
-                      <Radio value="en">
-                        <div className="language-option">
-                          <span className="language-name">English</span>
-                          <span className="language-native">English</span>
-                        </div>
-                      </Radio>
-                    </RadioGroup>
-                  </div>
-                </Disclosure>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right column - Top artists */}
@@ -314,7 +299,11 @@ export function ProfilePage() {
               </h3>
               <div className="top-artists-grid">
                 {topArtists.map((artist) => (
-                  <div key={artist.name} className="top-artist-tile">
+                  <div 
+                    key={artist.name} 
+                    className="top-artist-tile"
+                    onClick={() => handleArtistClick(artist)}
+                  >
                     {artist.imageUrl ? (
                       <img 
                         src={artist.imageUrl} 
@@ -342,6 +331,60 @@ export function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Artist Info Dialog */}
+      <Dialog
+        open={!!selectedArtist}
+        onClose={closeArtistDialog}
+        size="m"
+      >
+        <Dialog.Header
+          caption={selectedArtist?.name || ''}
+          insertBefore={
+            selectedArtist?.imageUrl ? (
+              <img 
+                src={selectedArtist.imageUrl} 
+                alt="" 
+                className="artist-dialog-avatar"
+              />
+            ) : undefined
+          }
+        />
+        <Dialog.Body>
+          {isArtistInfoLoading ? (
+            <div className="artist-dialog-loading">
+              <Loader size="m" />
+            </div>
+          ) : artistInfo ? (
+            <div className="artist-dialog-content">
+              <p className="artist-dialog-extract">{artistInfo.extract}</p>
+              {artistInfo.content_urls?.desktop.page && (
+                <a 
+                  href={artistInfo.content_urls.desktop.page}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="artist-dialog-link"
+                >
+                  {lang === 'ru' ? 'Читать на Wikipedia' : 'Read on Wikipedia'} →
+                </a>
+              )}
+            </div>
+          ) : (
+            <div className="artist-dialog-empty">
+              <p>
+                {lang === 'ru' 
+                  ? 'Информация об исполнителе не найдена'
+                  : 'Artist information not found'
+                }
+              </p>
+            </div>
+          )}
+        </Dialog.Body>
+        <Dialog.Footer
+          textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
+          onClickButtonCancel={closeArtistDialog}
+        />
+      </Dialog>
     </div>
   );
 }

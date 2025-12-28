@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AsideHeader } from '@gravity-ui/navigation';
 import { Icon } from '@gravity-ui/uikit';
-import { House, Persons, Person, ArrowRightFromSquare, MusicNote } from '@gravity-ui/icons';
+import { House, Persons, Person, ArrowRightFromSquare, MusicNote, Gear } from '@gravity-ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../hooks/useI18n';
 
@@ -76,6 +76,15 @@ export function AppLayout({ children }: AppLayoutProps) {
               <span className="tab-bar-label">{item.title}</span>
             </button>
           ))}
+          <button
+            className={`tab-bar-item ${location.pathname === '/settings' ? 'active' : ''}`}
+            onClick={() => navigate('/settings')}
+          >
+            <span className="tab-bar-icon">
+              <Icon data={Gear} size={24} />
+            </span>
+            <span className="tab-bar-label">{t.settings}</span>
+          </button>
         </nav>
       </div>
     );
@@ -94,8 +103,15 @@ export function AppLayout({ children }: AppLayoutProps) {
       menuItems={menuItems}
       renderFooter={() => (
         <div className="aside-footer">
+          <button 
+            className={`settings-button ${location.pathname === '/settings' ? 'active' : ''}`}
+            onClick={() => navigate('/settings')}
+          >
+            <Icon data={Gear} size={20} />
+            {!compact && <span>{t.settings}</span>}
+          </button>
           <button className="logout-button" onClick={handleLogout}>
-            <Icon data={ArrowRightFromSquare} size={18} />
+            <Icon data={ArrowRightFromSquare} size={20} />
             {!compact && <span>{t.logout}</span>}
           </button>
         </div>
