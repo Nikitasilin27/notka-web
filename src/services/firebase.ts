@@ -4,6 +4,7 @@ import {
   getDoc, 
   setDoc, 
   updateDoc,
+  deleteDoc,
   query, 
   orderBy, 
   limit, 
@@ -67,6 +68,102 @@ export async function updateCurrentTrack(
     } : null,
     lastUpdated: Timestamp.now()
   });
+}
+
+// ============ Followers functionality ============
+
+// Document ID format: {followerId}_{followingId}
+function getFollowDocId(followerId: string, followingId: string): string {
+  return `${followerId}_${followingId}`;
+}
+
+// Check if user A follows user B
+export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
+  const docId = getFollowDocId(followerId, followingId);
+  const docRef = doc(db, 'followers', docId);
+  const docSnap = await getDoc(docRef);
+  return docSnap.exists();
+}
+
+// Follow a user
+export async function followUser(followerId: string, followingId: string): Promise<void> {
+  const docId = getFollowDocId(followerId, followingId);
+  const docRef = doc(db, 'followers', docId);
+  
+  await setDoc(docRef, {
+    followerId,
+    followingId,
+    createdAt: Timestamp.now()
+  });
+}
+
+// Unfollow a user
+export async function unfollowUser(followerId: string, followingId: string): Promise<void> {
+  const docId = getFollowDocId(followerId, followingId);
+  const docRef = doc(db, 'followers', docId);
+  await deleteDoc(docRef);
+}
+
+// Get list of user IDs that a user follows
+export async function getFollowing(userId: string): Promise<string[]> {
+  const followersRef = collection(db, 'followers');
+  const q = query(
+    followersRef,
+    where('followerId', '==', userId)
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => doc.data().followingId);
+}
+
+// Get list of user IDs that follow a user
+export async function getFollowers(userId: string): Promise<string[]> {
+  const followersRef = collection(db, 'followers');
+  const q = query(
+    followersRef,
+    where('followingId', '==', userId)
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => doc.data().followerId);
+}
+
+// Get follower/following counts
+export async function getFollowCounts(userId: string): Promise<{ followers: number; following: number }> {
+  const [followers, following] = await Promise.all([
+    getFollowers(userId),
+    getFollowing(userId)
+  ]);
+  
+  return {
+    followers: followers.length,
+    following: following.length
+  };
+}
+
+// Get scrobbles from users that someone follows
+export async function getFollowingScrobbles(userId: string, limitCount = 50): Promise<Scrobble[]> {
+  const followingIds = await getFollowing(userId);
+  
+  if (followingIds.length === 0) {
+    return [];
+  }
+  
+  // Get recent scrobbles and filter by following list
+  const scrobblesRef = collection(db, 'scrobbles');
+  const q = query(
+    scrobblesRef,
+    orderBy('timestamp', 'desc'),
+    limit(300) // Get more to filter
+  );
+  
+  const snapshot = await getDocs(q);
+  
+  const followingScrobbles = snapshot.docs
+    .map(doc => docToScrobble(doc))
+    .filter(s => followingIds.includes(s.odl) || followingIds.includes(s.userId || ''));
+  
+  return followingScrobbles.slice(0, limitCount);
 }
 
 // Scrobble operations - совместимы с iOS структурой

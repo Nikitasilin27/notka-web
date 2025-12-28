@@ -1,21 +1,33 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Switch } from '@gravity-ui/uikit';
+import { Loader, Switch, Button, RadioGroup, Radio } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { Moon, Sun } from '@gravity-ui/icons';
-import { getUser, getUserScrobbles } from '../services/firebase';
+import { Moon, Sun, Globe, PersonPlus, PersonXmark } from '@gravity-ui/icons';
+import { 
+  getUser, 
+  getUserScrobbles, 
+  isFollowing, 
+  followUser, 
+  unfollowUser,
+  getFollowCounts 
+} from '../services/firebase';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n, formatTimeI18n, Language } from '../hooks/useI18n';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 
 export function ProfilePage() {
   const { odl } = useParams<{ odl: string }>();
   const { spotifyId } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t, lang, setLang } = useI18n();
   const [user, setUser] = useState<User | null>(null);
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [followStatus, setFollowStatus] = useState(false);
+  const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -23,18 +35,27 @@ export function ProfilePage() {
   useEffect(() => {
     if (!targetOdl) return;
     loadProfile();
-  }, [targetOdl]);
+  }, [targetOdl, spotifyId]);
 
   const loadProfile = async () => {
     if (!targetOdl) return;
     
     try {
-      const [userData, scrobblesData] = await Promise.all([
+      const [userData, scrobblesData, counts] = await Promise.all([
         getUser(targetOdl),
-        getUserScrobbles(targetOdl, 30)
+        getUserScrobbles(targetOdl, 30),
+        getFollowCounts(targetOdl)
       ]);
+      
       setUser(userData);
       setScrobbles(scrobblesData);
+      setFollowCounts(counts);
+      
+      // Check if current user follows this profile
+      if (spotifyId && targetOdl && spotifyId !== targetOdl) {
+        const following = await isFollowing(spotifyId, targetOdl);
+        setFollowStatus(following);
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
@@ -42,18 +63,25 @@ export function ProfilePage() {
     }
   };
 
-  const formatTime = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'только что';
-    if (minutes < 60) return `${minutes} мин назад`;
-    if (hours < 24) return `${hours} ч назад`;
-    if (days < 7) return `${days} д назад`;
-    return date.toLocaleDateString('ru-RU');
+  const handleFollowToggle = async () => {
+    if (!spotifyId || !targetOdl || isFollowLoading) return;
+    
+    setIsFollowLoading(true);
+    try {
+      if (followStatus) {
+        await unfollowUser(spotifyId, targetOdl);
+        setFollowStatus(false);
+        setFollowCounts(prev => ({ ...prev, followers: prev.followers - 1 }));
+      } else {
+        await followUser(spotifyId, targetOdl);
+        setFollowStatus(true);
+        setFollowCounts(prev => ({ ...prev, followers: prev.followers + 1 }));
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+    } finally {
+      setIsFollowLoading(false);
+    }
   };
 
   // Calculate stats
@@ -68,8 +96,6 @@ export function ProfilePage() {
   };
 
   const stats = getStats();
-
-  // Get last scrobble for "now playing" style display
   const lastScrobble = scrobbles.length > 0 ? scrobbles[0] : null;
 
   if (isLoading) {
@@ -84,16 +110,15 @@ export function ProfilePage() {
     return (
       <div className="empty-state">
         <div className="empty-state-icon">😕</div>
-        <p>Пользователь не найден</p>
+        <p>{t.userNotFound}</p>
       </div>
     );
   }
 
   return (
     <div className="profile-page">
-      {/* Hero Header like Last.fm */}
+      {/* Hero Header */}
       <div className="profile-hero">
-        {/* Background blur from last track */}
         {lastScrobble?.albumArtURL && (
           <div 
             className="profile-hero-bg"
@@ -112,27 +137,41 @@ export function ProfilePage() {
           />
           
           <div className="profile-hero-info">
-            <h1 className="profile-hero-name">{user.name}</h1>
+            <div className="profile-hero-name-row">
+              <h1 className="profile-hero-name">{user.name}</h1>
+              
+              {!isOwnProfile && (
+                <Button
+                  view={followStatus ? 'outlined' : 'action'}
+                  size="m"
+                  loading={isFollowLoading}
+                  onClick={handleFollowToggle}
+                >
+                  <Icon data={followStatus ? PersonXmark : PersonPlus} size={16} />
+                  {followStatus ? t.unfollow : t.follow}
+                </Button>
+              )}
+            </div>
             
             {lastScrobble && (
               <div className="profile-hero-listening">
                 {lastScrobble.title} — {lastScrobble.artist}
-                <span className="profile-hero-time">{formatTime(lastScrobble.timestamp)}</span>
+                <span className="profile-hero-time">{formatTimeI18n(lastScrobble.timestamp, t)}</span>
               </div>
             )}
             
             <div className="profile-hero-stats">
               <div className="profile-hero-stat">
                 <div className="profile-hero-stat-value">{stats.scrobbles}</div>
-                <div className="profile-hero-stat-label">скробблов</div>
+                <div className="profile-hero-stat-label">{t.scrobbles}</div>
               </div>
               <div className="profile-hero-stat">
-                <div className="profile-hero-stat-value">{stats.artists}</div>
-                <div className="profile-hero-stat-label">исполнителей</div>
+                <div className="profile-hero-stat-value">{followCounts.followers}</div>
+                <div className="profile-hero-stat-label">{t.followers}</div>
               </div>
               <div className="profile-hero-stat">
-                <div className="profile-hero-stat-value">{stats.tracks}</div>
-                <div className="profile-hero-stat-label">треков</div>
+                <div className="profile-hero-stat-value">{followCounts.following}</div>
+                <div className="profile-hero-stat-label">{t.followingCount}</div>
               </div>
             </div>
           </div>
@@ -142,12 +181,13 @@ export function ProfilePage() {
       {/* Settings section for own profile */}
       {isOwnProfile && (
         <div className="section">
-          <h2 className="section-title">Настройки</h2>
+          <h2 className="section-title">{t.settings}</h2>
           <div className="settings-list">
+            {/* Theme toggle */}
             <div className="settings-item">
               <div className="settings-item-info">
                 <Icon data={theme === 'dark' ? Moon : Sun} size={20} />
-                <span>Тёмная тема</span>
+                <span>{t.darkTheme}</span>
               </div>
               <Switch
                 checked={theme === 'dark'}
@@ -155,18 +195,46 @@ export function ProfilePage() {
                 size="m"
               />
             </div>
+            
+            {/* Language selector */}
+            <div className="settings-item settings-item-column">
+              <div className="settings-item-info">
+                <Icon data={Globe} size={20} />
+                <span>{t.language}</span>
+              </div>
+              <div className="language-selector">
+                <RadioGroup
+                  value={lang}
+                  onUpdate={(value) => setLang(value as Language)}
+                  direction="vertical"
+                >
+                  <Radio value="ru">
+                    <div className="language-option">
+                      <span className="language-name">{t.russian}</span>
+                      <span className="language-native">Русский</span>
+                    </div>
+                  </Radio>
+                  <Radio value="en">
+                    <div className="language-option">
+                      <span className="language-name">{t.english}</span>
+                      <span className="language-native">English</span>
+                    </div>
+                  </Radio>
+                </RadioGroup>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Recent tracks */}
       <div className="section">
-        <h2 className="section-title">Последние треки</h2>
+        <h2 className="section-title">{t.recentTracks}</h2>
         
         {scrobbles.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">🎧</div>
-            <p>{isOwnProfile ? 'Включи музыку в Spotify!' : 'Нет скробблов'}</p>
+            <p>{isOwnProfile ? t.turnOnSpotify : t.noScrobbles}</p>
           </div>
         ) : (
           <div className="feed">
@@ -174,7 +242,7 @@ export function ProfilePage() {
               <ScrobbleCard
                 key={scrobble.id}
                 scrobble={scrobble}
-                timeAgo={formatTime(scrobble.timestamp)}
+                timeAgo={formatTimeI18n(scrobble.timestamp, t)}
                 showUser={false}
               />
             ))}

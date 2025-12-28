@@ -2,16 +2,18 @@ import { useState, useEffect } from 'react';
 import { Loader, TabProvider, TabList, Tab } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
-import { getRecentScrobbles, getUserScrobbles, getUser } from '../services/firebase';
+import { useI18n, formatTimeI18n } from '../hooks/useI18n';
+import { getRecentScrobbles, getUserScrobbles, getFollowingScrobbles, getUser } from '../services/firebase';
 import { Scrobble, User } from '../types';
 import { NowPlaying } from '../components/NowPlaying';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 
-type TabId = 'all' | 'my';
+type TabId = 'all' | 'following' | 'my';
 
 export function FeedPage() {
   const { spotifyId } = useAuth();
   const { currentlyPlaying } = useScrobbler();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());
@@ -25,12 +27,19 @@ export function FeedPage() {
 
   const loadScrobbles = async () => {
     try {
-      const data = activeTab === 'all' 
-        ? await getRecentScrobbles(50)
-        : spotifyId ? await getUserScrobbles(spotifyId, 50) : [];
+      let data: Scrobble[] = [];
+      
+      if (activeTab === 'all') {
+        data = await getRecentScrobbles(50);
+      } else if (activeTab === 'following' && spotifyId) {
+        data = await getFollowingScrobbles(spotifyId, 50);
+      } else if (activeTab === 'my' && spotifyId) {
+        data = await getUserScrobbles(spotifyId, 50);
+      }
       
       setScrobbles(data);
 
+      // Load user info for scrobbles
       const userIds = [...new Set(data.map(s => s.odl))];
       const users = await Promise.all(userIds.map(id => getUser(id)));
       const map = new Map<string, User>();
@@ -45,18 +54,34 @@ export function FeedPage() {
     }
   };
 
-  const formatTime = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'только что';
-    if (minutes < 60) return `${minutes} мин назад`;
-    if (hours < 24) return `${hours} ч назад`;
-    if (days < 7) return `${days} д назад`;
-    return date.toLocaleDateString('ru-RU');
+  const renderEmptyState = () => {
+    if (activeTab === 'following') {
+      return (
+        <div className="empty-state">
+          <div className="empty-state-icon">👥</div>
+          <p>{t.noFollowingScrobbles}</p>
+          <p style={{ fontSize: 14, marginTop: 8, opacity: 0.7 }}>
+            {t.followSomeone}
+          </p>
+        </div>
+      );
+    }
+    
+    if (activeTab === 'my') {
+      return (
+        <div className="empty-state">
+          <div className="empty-state-icon">🎧</div>
+          <p>{t.turnOnSpotify}</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon">🎵</div>
+        <p>{t.noScrobbles}</p>
+      </div>
+    );
   };
 
   return (
@@ -67,8 +92,9 @@ export function FeedPage() {
         <div className="feed-tabs">
           <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>
             <TabList>
-              <Tab value="all">Все скробблы</Tab>
-              <Tab value="my">Мои скробблы</Tab>
+              <Tab value="all">{t.allScrobbles}</Tab>
+              <Tab value="following">{t.followingTab}</Tab>
+              <Tab value="my">{t.profile}</Tab>
             </TabList>
           </TabProvider>
         </div>
@@ -80,14 +106,7 @@ export function FeedPage() {
             <Loader size="l" />
           </div>
         ) : scrobbles.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">🎧</div>
-            <p>
-              {activeTab === 'my' 
-                ? 'У тебя пока нет скробблов. Включи музыку в Spotify!' 
-                : 'Пока никто ничего не слушает'}
-            </p>
-          </div>
+          renderEmptyState()
         ) : (
           <div className="feed">
             {scrobbles.map((scrobble) => (
@@ -95,8 +114,8 @@ export function FeedPage() {
                 key={scrobble.id}
                 scrobble={scrobble}
                 user={usersMap.get(scrobble.odl)}
-                timeAgo={formatTime(scrobble.timestamp)}
-                showUser={activeTab === 'all'}
+                timeAgo={formatTimeI18n(scrobble.timestamp, t)}
+                showUser={activeTab !== 'my'}
               />
             ))}
           </div>

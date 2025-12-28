@@ -4,6 +4,7 @@ import { AsideHeader } from '@gravity-ui/navigation';
 import { Icon } from '@gravity-ui/uikit';
 import { House, Persons, Person, ArrowRightFromSquare, MusicNote } from '@gravity-ui/icons';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../hooks/useI18n';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const { t } = useI18n();
   const [compact, setCompact] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -27,7 +29,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const menuItems = [
     {
       id: 'feed',
-      title: 'Лента',
+      title: t.feed,
       icon: House,
       link: '/',
       current: location.pathname === '/',
@@ -35,7 +37,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     },
     {
       id: 'users',
-      title: 'Слушатели',
+      title: t.listeners,
       icon: Persons,
       link: '/users',
       current: location.pathname === '/users',
@@ -43,7 +45,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     },
     {
       id: 'profile',
-      title: 'Профиль',
+      title: t.profile,
       icon: Person,
       link: '/profile',
       current: location.pathname.startsWith('/profile'),
@@ -94,7 +96,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="aside-footer">
           <button className="logout-button" onClick={handleLogout}>
             <Icon data={ArrowRightFromSquare} size={18} />
-            {!compact && <span>Выйти</span>}
+            {!compact && <span>{t.logout}</span>}
           </button>
         </div>
       )}

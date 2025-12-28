@@ -598,10 +598,23 @@ body {
   min-width: 0;
 }
 
+.profile-hero-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4); // 16px
+  margin-bottom: var(--spacing-2); // 8px
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .profile-hero-name-row {
+    justify-content: center;
+  }
+}
+
 .profile-hero-name {
   font-size: 32px;
   font-weight: 700;
-  margin-bottom: var(--spacing-2); // 8px
 }
 
 @media (max-width: 768px) {
@@ -750,9 +763,36 @@ body {
   border: 1px solid var(--g-color-line-generic);
 }
 
+.settings-item-column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-3); // 12px
+}
+
 .settings-item-info {
   display: flex;
   align-items: center;
   gap: var(--spacing-3); // 12px
   color: var(--g-color-text-primary);
+}
+
+// Language selector (Telegram style)
+.language-selector {
+  padding-left: var(--spacing-8); // 32px - align with text after icon
+}
+
+.language-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.language-name {
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.language-native {
+  font-size: 13px;
+  color: var(--g-color-text-secondary);
 }

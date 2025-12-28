@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@gravity-ui/uikit';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeContextProvider, useTheme } from './hooks/useTheme';
+import { I18nProvider } from './hooks/useI18n';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { CallbackPage } from './pages/CallbackPage';
@@ -123,8 +124,10 @@ function ThemedApp() {
 
 export default function App() {
   return (
-    <ThemeContextProvider>
-      <ThemedApp />
-    </ThemeContextProvider>
+    <I18nProvider>
+      <ThemeContextProvider>
+        <ThemedApp />
+      </ThemeContextProvider>
+    </I18nProvider>
   );
 }

@@ -4,9 +4,11 @@ import { Loader } from '@gravity-ui/uikit';
 import { getAllUsers } from '../services/firebase';
 import { User } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../hooks/useI18n';
 
 export function UsersPage() {
   const { spotifyId } = useAuth();
+  const { t } = useI18n();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,14 +39,14 @@ export function UsersPage() {
 
   return (
     <div>
-      <h1 className="page-title">Слушатели</h1>
+      <h1 className="page-title">{t.listenersTitle}</h1>
       
       {users.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">👥</div>
-          <p>Пока никого нет. Пригласи друзей!</p>
+          <p>{t.noListeners}</p>
           <p style={{ fontSize: 14, marginTop: 8, opacity: 0.7 }}>
-            Отправь им ссылку: notka-mvp.web.app
+            {t.sendLink}: notka-mvp.web.app
           </p>
         </div>
       ) : (
@@ -87,7 +89,7 @@ export function UsersPage() {
                     </div>
                   ) : (
                     <div className="listener-offline">
-                      Не в сети
+                      {t.offline}
                     </div>
                   )}
                 </div>
