@@ -197,15 +197,33 @@ body {
 .feed-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+.feed-sticky-header {
+  flex-shrink: 0;
+  background: var(--g-color-base-background);
+  padding-bottom: 16px;
+}
+
+.feed-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--g-color-scroll-handle);
+    border-radius: 3px;
+  }
 }
 
 .feed-tabs {
-  margin-bottom: 8px;
-}
-
-.feed-tabs {
-  margin-bottom: 16px;
+  margin-top: 16px;
 }
 
 // Now Playing Widget
@@ -632,4 +650,34 @@ body {
   .section-title {
     font-size: 16px;
   }
+}
+
+// Settings
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--g-color-base-float);
+  border-radius: var(--g-border-radius-m);
+}
+
+.settings-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--g-color-text-primary);
+}
+
+// Profile page
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }

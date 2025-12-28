@@ -61,43 +61,47 @@ export function FeedPage() {
 
   return (
     <div className="feed-page">
-      <NowPlaying currentlyPlaying={currentlyPlaying} />
-      
-      <div className="feed-tabs">
-        <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>
-          <TabList>
-            <Tab value="all">Все скробблы</Tab>
-            <Tab value="my">Мои скробблы</Tab>
-          </TabList>
-        </TabProvider>
+      <div className="feed-sticky-header">
+        <NowPlaying currentlyPlaying={currentlyPlaying} />
+        
+        <div className="feed-tabs">
+          <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>
+            <TabList>
+              <Tab value="all">Все скробблы</Tab>
+              <Tab value="my">Мои скробблы</Tab>
+            </TabList>
+          </TabProvider>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div className="loading-container">
-          <Loader size="l" />
-        </div>
-      ) : scrobbles.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🎧</div>
-          <p>
-            {activeTab === 'my' 
-              ? 'У тебя пока нет скробблов. Включи музыку в Spotify!' 
-              : 'Пока никто ничего не слушает'}
-          </p>
-        </div>
-      ) : (
-        <div className="feed">
-          {scrobbles.map((scrobble) => (
-            <ScrobbleCard
-              key={scrobble.id}
-              scrobble={scrobble}
-              user={usersMap.get(scrobble.odl)}
-              timeAgo={formatTime(scrobble.timestamp)}
-              showUser={activeTab === 'all'}
-            />
-          ))}
-        </div>
-      )}
+      <div className="feed-content">
+        {isLoading ? (
+          <div className="loading-container">
+            <Loader size="l" />
+          </div>
+        ) : scrobbles.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">🎧</div>
+            <p>
+              {activeTab === 'my' 
+                ? 'У тебя пока нет скробблов. Включи музыку в Spotify!' 
+                : 'Пока никто ничего не слушает'}
+            </p>
+          </div>
+        ) : (
+          <div className="feed">
+            {scrobbles.map((scrobble) => (
+              <ScrobbleCard
+                key={scrobble.id}
+                scrobble={scrobble}
+                user={usersMap.get(scrobble.odl)}
+                timeAgo={formatTime(scrobble.timestamp)}
+                showUser={activeTab === 'all'}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

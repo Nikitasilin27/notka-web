@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader } from '@gravity-ui/uikit';
+import { Loader, Switch } from '@gravity-ui/uikit';
+import { Icon } from '@gravity-ui/uikit';
+import { Moon, Sun } from '@gravity-ui/icons';
 import { getUser, getUserScrobbles } from '../services/firebase';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 
 export function ProfilePage() {
   const { odl } = useParams<{ odl: string }>();
   const { spotifyId } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +56,16 @@ export function ProfilePage() {
     return date.toLocaleDateString('ru-RU');
   };
 
+  // Check if currentTrack is recent (within last 5 minutes)
+  const isCurrentlyPlaying = () => {
+    if (!user?.currentTrack || !user?.lastUpdated) return false;
+    const lastUpdated = user.lastUpdated instanceof Date 
+      ? user.lastUpdated 
+      : new Date((user.lastUpdated as any).seconds * 1000);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    return lastUpdated > fiveMinutesAgo;
+  };
+
   if (isLoading) {
     return (
       <div className="loading-container">
@@ -70,7 +84,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div>
+    <div className="profile-page">
       <div className="profile-header">
         <img 
           src={user.avatarURL || '/default-avatar.png'} 
@@ -84,7 +98,7 @@ export function ProfilePage() {
           <h1 className="profile-name">{user.name}</h1>
           {user.bio && <p className="profile-bio">{user.bio}</p>}
           
-          {user.currentTrack && (
+          {isCurrentlyPlaying() && user.currentTrack && (
             <div className="profile-listening">
               <span className="now-playing-pulse" />
               {user.currentTrack.trackName} — {user.currentTrack.artistName}
@@ -99,6 +113,25 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {isOwnProfile && (
+        <div className="section">
+          <h2 className="section-title">Настройки</h2>
+          <div className="settings-list">
+            <div className="settings-item">
+              <div className="settings-item-info">
+                <Icon data={theme === 'dark' ? Moon : Sun} size={20} />
+                <span>Тёмная тема</span>
+              </div>
+              <Switch
+                checked={theme === 'dark'}
+                onUpdate={toggleTheme}
+                size="m"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="section">
         <h2 className="section-title">История прослушиваний</h2>
