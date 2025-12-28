@@ -291,8 +291,15 @@ export function ProfilePage() {
     const info = await getArtistWikipediaInfo(artist.name, lang);
     setArtistInfo(info);
     
+    // Get unique tracks by title
+    const seenTitles = new Set<string>();
     const tracks = allScrobbles
-      .filter(s => normalizeArtistName(s.artist) === artist.name)
+      .filter(s => {
+        if (normalizeArtistName(s.artist) !== artist.name) return false;
+        if (seenTitles.has(s.title)) return false;
+        seenTitles.add(s.title);
+        return true;
+      })
       .slice(0, 5);
     setArtistTracks(tracks);
     
@@ -634,9 +641,13 @@ export function ProfilePage() {
               {artistTracks.length > 0 && (
                 <div className="artist-dialog-tracks">
                   <h4 className="artist-dialog-tracks-title">
-                    {lang === 'ru' 
-                      ? `Вы слушали у ${selectedArtist?.name}:`
-                      : `You listened from ${selectedArtist?.name}:`
+                    {isOwnProfile 
+                      ? (lang === 'ru' 
+                          ? `Вы слушали у ${selectedArtist?.name}:`
+                          : `You listened from ${selectedArtist?.name}:`)
+                      : (lang === 'ru'
+                          ? `${user?.name} слушал(а) у ${selectedArtist?.name}:`
+                          : `${user?.name} listened from ${selectedArtist?.name}:`)
                     }
                   </h4>
                   <div className="artist-dialog-tracks-list">
