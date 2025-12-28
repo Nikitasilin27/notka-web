@@ -17,35 +17,47 @@ export interface WikipediaArtistInfo {
 // Cache for Wikipedia info
 const wikiCache = new Map<string, WikipediaArtistInfo | null>();
 
-export async function getArtistWikipediaInfo(artistName: string): Promise<WikipediaArtistInfo | null> {
-  const cacheKey = artistName.toLowerCase();
+export async function getArtistWikipediaInfo(
+  artistName: string, 
+  lang: 'ru' | 'en' = 'en'
+): Promise<WikipediaArtistInfo | null> {
+  const cacheKey = `${artistName.toLowerCase()}_${lang}`;
   
   // Check cache
   if (wikiCache.has(cacheKey)) {
     return wikiCache.get(cacheKey) || null;
   }
   
+  const baseUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary`;
+  
   try {
     // Try exact match first
     let response = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`,
+      `${baseUrl}/${encodeURIComponent(artistName)}`,
       { headers: { 'Accept': 'application/json' } }
     );
     
     // If not found, try with "(band)" suffix
     if (!response.ok) {
+      const bandSuffix = lang === 'ru' ? ' (группа)' : ' (band)';
       response = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName + ' (band)')}`,
+        `${baseUrl}/${encodeURIComponent(artistName + bandSuffix)}`,
         { headers: { 'Accept': 'application/json' } }
       );
     }
     
     // If still not found, try with "(musician)" suffix
     if (!response.ok) {
+      const musicianSuffix = lang === 'ru' ? ' (музыкант)' : ' (musician)';
       response = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName + ' (musician)')}`,
+        `${baseUrl}/${encodeURIComponent(artistName + musicianSuffix)}`,
         { headers: { 'Accept': 'application/json' } }
       );
+    }
+    
+    // If Russian not found, fallback to English
+    if (!response.ok && lang === 'ru') {
+      return getArtistWikipediaInfo(artistName, 'en');
     }
     
     if (!response.ok) {
@@ -55,7 +67,7 @@ export async function getArtistWikipediaInfo(artistName: string): Promise<Wikipe
     
     const data = await response.json();
     
-    // Check if it's a disambiguation page or not about music
+    // Check if it's a disambiguation page
     if (data.type === 'disambiguation') {
       wikiCache.set(cacheKey, null);
       return null;

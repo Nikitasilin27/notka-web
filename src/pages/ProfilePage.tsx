@@ -26,7 +26,6 @@ interface TopArtist {
 
 // Normalize artist name - take only first artist (before comma or feat)
 function normalizeArtistName(artist: string): string {
-  // Remove feat., ft., featuring, &, etc.
   const separators = [',', ' feat.', ' feat ', ' ft.', ' ft ', ' featuring ', ' & ', ' x ', ' X '];
   let name = artist;
   
@@ -57,6 +56,7 @@ export function ProfilePage() {
   // Artist dialog state
   const [selectedArtist, setSelectedArtist] = useState<TopArtist | null>(null);
   const [artistInfo, setArtistInfo] = useState<WikipediaArtistInfo | null>(null);
+  const [artistTracks, setArtistTracks] = useState<Scrobble[]>([]);
   const [isArtistInfoLoading, setIsArtistInfoLoading] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
@@ -148,16 +148,32 @@ export function ProfilePage() {
   const handleArtistClick = async (artist: TopArtist) => {
     setSelectedArtist(artist);
     setArtistInfo(null);
+    setArtistTracks([]);
     setIsArtistInfoLoading(true);
     
-    const info = await getArtistWikipediaInfo(artist.name);
+    // Get Wikipedia info in user's language
+    const info = await getArtistWikipediaInfo(artist.name, lang);
     setArtistInfo(info);
+    
+    // Get user's tracks by this artist
+    const tracks = allScrobbles
+      .filter(s => normalizeArtistName(s.artist) === artist.name)
+      .slice(0, 5);
+    setArtistTracks(tracks);
+    
     setIsArtistInfoLoading(false);
   };
 
   const closeArtistDialog = () => {
     setSelectedArtist(null);
     setArtistInfo(null);
+    setArtistTracks([]);
+  };
+
+  const openWikipedia = () => {
+    if (artistInfo?.content_urls?.desktop.page) {
+      window.open(artistInfo.content_urls.desktop.page, '_blank');
+    }
   };
 
   const lastScrobble = scrobbles.length > 0 ? scrobbles[0] : null;
@@ -337,6 +353,7 @@ export function ProfilePage() {
         open={!!selectedArtist}
         onClose={closeArtistDialog}
         size="m"
+        hasCloseButton={false}
       >
         <Dialog.Header
           caption={selectedArtist?.name || ''}
@@ -355,34 +372,56 @@ export function ProfilePage() {
             <div className="artist-dialog-loading">
               <Loader size="m" />
             </div>
-          ) : artistInfo ? (
-            <div className="artist-dialog-content">
-              <p className="artist-dialog-extract">{artistInfo.extract}</p>
-              {artistInfo.content_urls?.desktop.page && (
-                <a 
-                  href={artistInfo.content_urls.desktop.page}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="artist-dialog-link"
-                >
-                  {lang === 'ru' ? 'Читать на Wikipedia' : 'Read on Wikipedia'} →
-                </a>
-              )}
-            </div>
           ) : (
-            <div className="artist-dialog-empty">
-              <p>
-                {lang === 'ru' 
-                  ? 'Информация об исполнителе не найдена'
-                  : 'Artist information not found'
-                }
-              </p>
+            <div className="artist-dialog-content">
+              {artistInfo ? (
+                <p className="artist-dialog-extract">{artistInfo.extract}</p>
+              ) : (
+                <p className="artist-dialog-empty-text">
+                  {lang === 'ru' 
+                    ? 'Информация об исполнителе не найдена'
+                    : 'Artist information not found'
+                  }
+                </p>
+              )}
+              
+              {/* User's tracks by this artist */}
+              {artistTracks.length > 0 && (
+                <div className="artist-dialog-tracks">
+                  <h4 className="artist-dialog-tracks-title">
+                    {lang === 'ru' 
+                      ? `Вы слушали у ${selectedArtist?.name}:`
+                      : `You listened from ${selectedArtist?.name}:`
+                    }
+                  </h4>
+                  <div className="artist-dialog-tracks-list">
+                    {artistTracks.map((track, idx) => (
+                      <div key={`${track.id}-${idx}`} className="artist-dialog-track">
+                        {track.albumArtURL && (
+                          <img 
+                            src={track.albumArtURL} 
+                            alt="" 
+                            className="artist-dialog-track-art"
+                          />
+                        )}
+                        <div className="artist-dialog-track-info">
+                          <div className="artist-dialog-track-title">{track.title}</div>
+                          <div className="artist-dialog-track-album">{track.album}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Dialog.Body>
         <Dialog.Footer
-          textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
           onClickButtonCancel={closeArtistDialog}
+          textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
+          onClickButtonApply={artistInfo?.content_urls ? openWikipedia : undefined}
+          textButtonApply={artistInfo?.content_urls ? 'Wikipedia' : undefined}
+          propsButtonApply={{ view: 'flat' }}
         />
       </Dialog>
     </div>

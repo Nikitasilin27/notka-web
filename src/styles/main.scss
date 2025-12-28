@@ -869,6 +869,69 @@ body {
   color: var(--g-color-text-secondary);
 }
 
+.artist-dialog-empty-text {
+  color: var(--g-color-text-secondary);
+  margin: 0;
+}
+
+// Artist tracks in dialog
+.artist-dialog-tracks {
+  margin-top: var(--spacing-5); // 20px
+  padding-top: var(--spacing-4); // 16px
+  border-top: 1px solid var(--g-color-line-generic);
+}
+
+.artist-dialog-tracks-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 var(--spacing-3);
+  color: var(--g-color-text-secondary);
+}
+
+.artist-dialog-tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2); // 8px
+}
+
+.artist-dialog-track {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3); // 12px
+  padding: var(--spacing-2); // 8px
+  border-radius: var(--g-border-radius-s);
+  background: var(--g-color-base-simple);
+}
+
+.artist-dialog-track-art {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--g-border-radius-xs);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.artist-dialog-track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.artist-dialog-track-title {
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artist-dialog-track-album {
+  font-size: 12px;
+  color: var(--g-color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 // Empty state
 .empty-state {
   display: flex;
@@ -949,28 +1012,33 @@ body {
   color: var(--g-color-text-primary);
 }
 
-// Language selector accordion
-.language-disclosure {
+// Language selector - custom accordion
+.settings-accordion {
   background: var(--g-color-base-float);
   border: 1px solid var(--g-color-line-generic);
   border-radius: var(--g-border-radius-m);
   overflow: hidden;
+}
+
+.settings-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--g-color-text-primary);
+  transition: background 0.2s;
   
-  // Override Disclosure styles - chevron on right
-  .g-disclosure__summary {
-    padding: var(--spacing-3) var(--spacing-4); // 12px 16px
-    flex-direction: row-reverse;
-    justify-content: space-between;
-  }
-  
-  .g-disclosure__arrow {
-    margin-left: auto;
-    margin-right: 0;
+  &:hover {
+    background: var(--g-color-base-simple-hover);
   }
 }
 
-.language-selector {
-  padding: var(--spacing-2) var(--spacing-4) var(--spacing-4); // 8px 16px 16px
+.settings-accordion-content {
+  padding: var(--spacing-2) var(--spacing-4) var(--spacing-4);
   padding-left: calc(var(--spacing-4) + 32px); // Align with text after icon
 }
 
