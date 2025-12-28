@@ -8,7 +8,7 @@
   --notka-brand: var(--g-color-base-brand);
   --notka-brand-hover: var(--g-color-base-brand-hover);
   --notka-bg: var(--g-color-base-background);
-  --notka-max-width: 800px;
+  --notka-max-width: 900px;
   
   // Spacing tokens
   --spacing-1: 4px;
@@ -24,6 +24,13 @@
   
   // Grid gap (Gravity UI standard)
   --grid-gap: 20px;
+}
+
+// Wider layout for large screens
+@media (min-width: 1440px) {
+  :root {
+    --notka-max-width: 1120px;
+  }
 }
 
 * {
@@ -682,11 +689,17 @@ body {
 // Profile content - Two column layout like Last.fm
 .profile-content {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 380px;
   gap: var(--spacing-6); // 24px
 }
 
-@media (max-width: 900px) {
+@media (min-width: 1440px) {
+  .profile-content {
+    grid-template-columns: 1fr 480px;
+  }
+}
+
+@media (max-width: 1100px) {
   .profile-content {
     grid-template-columns: 1fr;
   }
@@ -708,9 +721,9 @@ body {
   gap: var(--spacing-4); // 16px
 }
 
-// Top artists card
-.top-artists-card {
-  padding: var(--spacing-4) !important; // 16px
+// Top artists section - Tile layout like Last.fm
+.top-artists-section {
+  // No card wrapper, just title and grid
 }
 
 .top-artists-title {
@@ -720,65 +733,81 @@ body {
 }
 
 .top-artists-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2); // 8px
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-3); // 12px
 }
 
-.top-artist-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3); // 12px
-  padding: var(--spacing-2); // 8px
-  border-radius: var(--g-border-radius-s);
-  transition: background 0.2s;
-  
-  &:hover {
-    background: var(--g-color-base-simple-hover);
+@media (max-width: 1100px) {
+  .top-artists-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
-.top-artist-rank {
-  width: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--g-color-text-hint);
-  text-align: center;
-  flex-shrink: 0;
+@media (max-width: 600px) {
+  .top-artists-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-.top-artist-image {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--g-border-radius-s);
+.top-artist-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--g-border-radius-m);
+  overflow: hidden;
+  cursor: pointer;
+  
+  &:hover {
+    .top-artist-tile-image {
+      transform: scale(1.05);
+    }
+    
+    .top-artist-tile-overlay {
+      background: linear-gradient(transparent 30%, rgba(0, 0, 0, 0.9) 100%);
+    }
+  }
+}
+
+.top-artist-tile-image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  flex-shrink: 0;
+  transition: transform 0.3s ease;
 }
 
-.top-artist-placeholder {
+.top-artist-tile-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--g-color-base-generic);
-  font-size: 20px;
+  font-size: 32px;
 }
 
-.top-artist-info {
-  flex: 1;
-  min-width: 0;
+.top-artist-tile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--spacing-3); // 12px
+  background: linear-gradient(transparent 40%, rgba(0, 0, 0, 0.8) 100%);
+  transition: background 0.3s ease;
 }
 
-.top-artist-name {
-  font-weight: 500;
-  font-size: 15px;
+.top-artist-tile-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.top-artist-count {
-  font-size: 13px;
-  color: var(--g-color-text-secondary);
+.top-artist-tile-count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 // Show more button

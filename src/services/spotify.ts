@@ -189,3 +189,69 @@ export async function getRecentlyPlayed(limit = 20): Promise<{ items: { track: S
   if (!response.ok) return null;
   return response.json();
 }
+
+// Search for artist to get their image
+export interface SpotifyArtist {
+  id: string;
+  name: string;
+  images: { url: string; width: number; height: number }[];
+  genres: string[];
+  popularity: number;
+}
+
+// Cache for artist images to avoid repeated API calls
+const artistImageCache = new Map<string, string | null>();
+
+export async function getArtistImage(artistName: string): Promise<string | null> {
+  // Check cache first
+  const cached = artistImageCache.get(artistName.toLowerCase());
+  if (cached !== undefined) {
+    return cached;
+  }
+  
+  const token = await getValidAccessToken();
+  if (!token) return null;
+  
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(artistName)}&type=artist&limit=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    if (!response.ok) {
+      artistImageCache.set(artistName.toLowerCase(), null);
+      return null;
+    }
+    
+    const data = await response.json();
+    const artist = data.artists?.items?.[0] as SpotifyArtist | undefined;
+    const imageUrl = artist?.images?.[0]?.url || null;
+    
+    // Cache the result
+    artistImageCache.set(artistName.toLowerCase(), imageUrl);
+    
+    return imageUrl;
+  } catch (error) {
+    console.error('Error fetching artist image:', error);
+    artistImageCache.set(artistName.toLowerCase(), null);
+    return null;
+  }
+}
+
+// Batch fetch artist images
+export async function getArtistImages(artistNames: string[]): Promise<Map<string, string | null>> {
+  const results = new Map<string, string | null>();
+  
+  // Process in parallel but with some throttling
+  const batchSize = 5;
+  for (let i = 0; i < artistNames.length; i += batchSize) {
+    const batch = artistNames.slice(i, i + batchSize);
+    const promises = batch.map(async (name) => {
+      const image = await getArtistImage(name);
+      results.set(name, image);
+    });
+    await Promise.all(promises);
+  }
+  
+  return results;
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Switch, Button, RadioGroup, Radio, Card, Disclosure } from '@gravity-ui/uikit';
+import { Loader, Switch, Button, RadioGroup, Radio, Disclosure } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { Moon, Sun, Globe, PersonPlus, PersonXmark, ChevronRight } from '@gravity-ui/icons';
 import { 
@@ -11,6 +11,7 @@ import {
   unfollowUser,
   getFollowCounts 
 } from '../services/firebase';
+import { getArtistImages } from '../services/spotify';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -31,6 +32,7 @@ export function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [allScrobbles, setAllScrobbles] = useState<Scrobble[]>([]);
+  const [topArtists, setTopArtists] = useState<TopArtist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [followStatus, setFollowStatus] = useState(false);
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
@@ -51,7 +53,7 @@ export function ProfilePage() {
     try {
       const [userData, scrobblesData, counts] = await Promise.all([
         getUser(targetOdl),
-        getUserScrobbles(targetOdl, 100), // Get more for top artists
+        getUserScrobbles(targetOdl, 100),
         getFollowCounts(targetOdl)
       ]);
       
@@ -59,6 +61,36 @@ export function ProfilePage() {
       setAllScrobbles(scrobblesData);
       setScrobbles(scrobblesData.slice(0, 10));
       setFollowCounts(counts);
+      
+      // Calculate top artists
+      const artistMap = new Map<string, { count: number; albumArtUrl?: string }>();
+      scrobblesData.forEach(scrobble => {
+        const existing = artistMap.get(scrobble.artist);
+        if (existing) {
+          existing.count++;
+        } else {
+          artistMap.set(scrobble.artist, {
+            count: 1,
+            albumArtUrl: scrobble.albumArtURL
+          });
+        }
+      });
+      
+      const topArtistsList = Array.from(artistMap.entries())
+        .map(([name, data]) => ({ name, count: data.count, imageUrl: data.albumArtUrl }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8);
+      
+      setTopArtists(topArtistsList);
+      
+      // Fetch artist images from Spotify (async, will update state when done)
+      const artistNames = topArtistsList.map(a => a.name);
+      getArtistImages(artistNames).then(imageMap => {
+        setTopArtists(prev => prev.map(artist => ({
+          ...artist,
+          imageUrl: imageMap.get(artist.name) || artist.imageUrl
+        })));
+      });
       
       if (spotifyId && targetOdl && spotifyId !== targetOdl) {
         const following = await isFollowing(spotifyId, targetOdl);
@@ -92,29 +124,6 @@ export function ProfilePage() {
     }
   };
 
-  // Calculate top artists from scrobbles
-  const getTopArtists = (): TopArtist[] => {
-    const artistMap = new Map<string, { count: number; imageUrl?: string }>();
-    
-    allScrobbles.forEach(scrobble => {
-      const existing = artistMap.get(scrobble.artist);
-      if (existing) {
-        existing.count++;
-      } else {
-        artistMap.set(scrobble.artist, {
-          count: 1,
-          imageUrl: scrobble.albumArtURL // Use album art as artist image
-        });
-      }
-    });
-    
-    return Array.from(artistMap.entries())
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8); // Top 8 artists
-  };
-
-  const topArtists = getTopArtists();
   const lastScrobble = scrobbles.length > 0 ? scrobbles[0] : null;
   
   const stats = {
@@ -299,28 +308,27 @@ export function ProfilePage() {
         {/* Right column - Top artists */}
         <div className="profile-sidebar">
           {topArtists.length > 0 && (
-            <Card className="top-artists-card">
+            <div className="top-artists-section">
               <h3 className="top-artists-title">
                 {lang === 'ru' ? 'Топ исполнители' : 'Top Artists'}
               </h3>
               <div className="top-artists-grid">
-                {topArtists.map((artist, index) => (
-                  <div key={artist.name} className="top-artist-item">
-                    <div className="top-artist-rank">{index + 1}</div>
+                {topArtists.map((artist) => (
+                  <div key={artist.name} className="top-artist-tile">
                     {artist.imageUrl ? (
                       <img 
                         src={artist.imageUrl} 
                         alt={artist.name}
-                        className="top-artist-image"
+                        className="top-artist-tile-image"
                       />
                     ) : (
-                      <div className="top-artist-image top-artist-placeholder">
+                      <div className="top-artist-tile-image top-artist-tile-placeholder">
                         🎵
                       </div>
                     )}
-                    <div className="top-artist-info">
-                      <div className="top-artist-name">{artist.name}</div>
-                      <div className="top-artist-count">
+                    <div className="top-artist-tile-overlay">
+                      <div className="top-artist-tile-name">{artist.name}</div>
+                      <div className="top-artist-tile-count">
                         {artist.count} {lang === 'ru' 
                           ? (artist.count === 1 ? 'прослушивание' : 'прослушиваний')
                           : (artist.count === 1 ? 'play' : 'plays')
@@ -330,7 +338,7 @@ export function ProfilePage() {
                   </div>
                 ))}
               </div>
-            </Card>
+            </div>
           )}
         </div>
       </div>
