@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader, RadioGroup } from '@gravity-ui/uikit';
+import { Loader, TabProvider, TabList, Tab } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { getRecentScrobbles, getUserScrobbles, getUser } from '../services/firebase';
@@ -19,7 +19,7 @@ export function FeedPage() {
 
   useEffect(() => {
     loadScrobbles();
-    const interval = setInterval(loadScrobbles, 30000); // Refresh every 30s
+    const interval = setInterval(loadScrobbles, 30000);
     return () => clearInterval(interval);
   }, [activeTab, spotifyId]);
 
@@ -31,7 +31,6 @@ export function FeedPage() {
       
       setScrobbles(data);
 
-      // Load user info for all scrobbles
       const userIds = [...new Set(data.map(s => s.odl))];
       const users = await Promise.all(userIds.map(id => getUser(id)));
       const map = new Map<string, User>();
@@ -65,14 +64,12 @@ export function FeedPage() {
       <NowPlaying currentlyPlaying={currentlyPlaying} />
       
       <div className="feed-tabs">
-        <RadioGroup
-          value={activeTab}
-          onUpdate={(value: string) => setActiveTab(value as TabId)}
-          options={[
-            { value: 'all', content: 'Все скробблы' },
-            { value: 'my', content: 'Мои скробблы' },
-          ]}
-        />
+        <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>
+          <TabList>
+            <Tab value="all">Все скробблы</Tab>
+            <Tab value="my">Мои скробблы</Tab>
+          </TabList>
+        </TabProvider>
       </div>
 
       {isLoading ? (
