@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Button, Dialog } from '@gravity-ui/uikit';
+import { Loader, Button, Dialog, Pagination } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { PersonPlus, PersonXmark, ChevronRight } from '@gravity-ui/icons';
+import { PersonPlus, PersonXmark, ChevronRight, ChevronUp } from '@gravity-ui/icons';
 import { 
   getUser, 
   getUserScrobbles, 
@@ -39,6 +39,8 @@ function normalizeArtistName(artist: string): string {
   return name.trim();
 }
 
+const TRACKS_PER_PAGE = 10;
+
 export function ProfilePage() {
   const { odl } = useParams<{ odl: string }>();
   const { spotifyId } = useAuth();
@@ -51,7 +53,10 @@ export function ProfilePage() {
   const [followStatus, setFollowStatus] = useState(false);
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
   const [isFollowLoading, setIsFollowLoading] = useState(false);
-  const [showAllScrobbles, setShowAllScrobbles] = useState(false);
+  
+  // Pagination state
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Artist dialog state
   const [selectedArtist, setSelectedArtist] = useState<TopArtist | null>(null);
@@ -269,7 +274,22 @@ export function ProfilePage() {
         {/* Left column - Recent tracks */}
         <div className="profile-main">
           <div className="section">
-            <h2 className="section-title">{t.recentTracks}</h2>
+            <div className="section-header">
+              <h2 className="section-title">{t.recentTracks}</h2>
+              {isExpanded && (
+                <Button
+                  view="flat"
+                  size="s"
+                  onClick={() => {
+                    setIsExpanded(false);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <Icon data={ChevronUp} size={14} />
+                  {lang === 'ru' ? 'Свернуть' : 'Collapse'}
+                </Button>
+              )}
+            </div>
             
             {scrobbles.length === 0 ? (
               <div className="empty-state">
@@ -279,7 +299,10 @@ export function ProfilePage() {
             ) : (
               <>
                 <div className="feed">
-                  {(showAllScrobbles ? allScrobbles : scrobbles).map((scrobble) => (
+                  {(isExpanded 
+                    ? allScrobbles.slice((currentPage - 1) * TRACKS_PER_PAGE, currentPage * TRACKS_PER_PAGE)
+                    : scrobbles
+                  ).map((scrobble) => (
                     <ScrobbleCard
                       key={scrobble.id}
                       scrobble={scrobble}
@@ -289,12 +312,21 @@ export function ProfilePage() {
                   ))}
                 </div>
                 
-                {allScrobbles.length > 10 && !showAllScrobbles && (
+                {isExpanded ? (
+                  <div className="pagination-container">
+                    <Pagination
+                      page={currentPage}
+                      pageSize={TRACKS_PER_PAGE}
+                      total={allScrobbles.length}
+                      onUpdate={(page) => setCurrentPage(page)}
+                    />
+                  </div>
+                ) : allScrobbles.length > 10 && (
                   <Button
                     view="flat"
                     size="l"
                     width="max"
-                    onClick={() => setShowAllScrobbles(true)}
+                    onClick={() => setIsExpanded(true)}
                     className="show-more-button"
                   >
                     {lang === 'ru' ? 'Показать больше' : 'Show more'}

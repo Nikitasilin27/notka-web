@@ -722,6 +722,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-6); // 24px
+  min-width: 0; // Prevent grid blowout
+}
+
+// Keep feed width consistent when expanded
+.profile-main .feed {
+  max-width: 100%;
 }
 
 .profile-sidebar {
@@ -822,6 +828,27 @@ body {
 // Show more button
 .show-more-button {
   margin-top: var(--spacing-4); // 16px
+}
+
+// Section header with collapse button
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-4); // 16px
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+}
+
+// Pagination container
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-5); // 20px
+  padding-top: var(--spacing-4); // 16px
+  border-top: 1px solid var(--g-color-line-generic);
 }
 
 // Settings page
