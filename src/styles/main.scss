@@ -556,17 +556,28 @@ body {
   font-size: 14px;
 }
 
-.profile-listening {
+.profile-last-listened {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-2); // 8px
-  margin-top: var(--spacing-2); // 8px
+  margin-top: var(--spacing-1); // 4px
   font-size: 14px;
-  color: var(--notka-brand);
+  color: var(--g-color-text-secondary);
+}
+
+.profile-last-listened-time {
+  color: var(--g-color-text-hint);
+  font-size: 13px;
+  
+  &::before {
+    content: '•';
+    margin-right: var(--spacing-2);
+  }
 }
 
 @media (max-width: 768px) {
-  .profile-listening {
+  .profile-last-listened {
     justify-content: center;
   }
 }

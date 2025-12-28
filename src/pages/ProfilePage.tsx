@@ -56,40 +56,18 @@ export function ProfilePage() {
     return date.toLocaleDateString('ru-RU');
   };
 
-  // Check if currentTrack is recent (within last 5 minutes)
-  const isCurrentlyPlaying = () => {
-    // No currentTrack data
-    if (!user?.currentTrack) return false;
-    
-    // Check if currentTrack has actual data (not empty)
-    if (!user.currentTrack.trackName || !user.currentTrack.artistName) return false;
-    
-    // No lastUpdated timestamp
-    if (!user?.lastUpdated) return false;
-    
-    // Parse lastUpdated from different formats
-    let lastUpdatedDate: Date;
-    try {
-      if (user.lastUpdated instanceof Date) {
-        lastUpdatedDate = user.lastUpdated;
-      } else if (typeof user.lastUpdated === 'object' && 'seconds' in user.lastUpdated) {
-        // Firebase Timestamp
-        lastUpdatedDate = new Date((user.lastUpdated as any).seconds * 1000);
-      } else if (typeof user.lastUpdated === 'string') {
-        lastUpdatedDate = new Date(user.lastUpdated);
-      } else if (typeof user.lastUpdated === 'number') {
-        lastUpdatedDate = new Date(user.lastUpdated);
-      } else {
-        return false;
-      }
-    } catch {
-      return false;
-    }
-    
-    // Check if within last 5 minutes
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return lastUpdatedDate > fiveMinutesAgo;
+  // Get last listened info from most recent scrobble
+  const getLastListened = () => {
+    if (scrobbles.length === 0) return null;
+    const lastScrobble = scrobbles[0];
+    return {
+      track: lastScrobble.title,
+      artist: lastScrobble.artist,
+      time: formatTime(lastScrobble.timestamp)
+    };
   };
+
+  const lastListened = getLastListened();
 
   if (isLoading) {
     return (
@@ -121,12 +99,11 @@ export function ProfilePage() {
         />
         <div className="profile-info">
           <h1 className="profile-name">{user.name}</h1>
-          {user.bio && <p className="profile-bio">{user.bio}</p>}
           
-          {isCurrentlyPlaying() && user.currentTrack && (
-            <div className="profile-listening">
-              <span className="now-playing-pulse" />
-              {user.currentTrack.trackName} — {user.currentTrack.artistName}
+          {lastListened && (
+            <div className="profile-last-listened">
+              {lastListened.track} — {lastListened.artist}
+              <span className="profile-last-listened-time">{lastListened.time}</span>
             </div>
           )}
           
