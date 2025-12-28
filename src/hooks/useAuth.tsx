@@ -6,6 +6,7 @@ import { getUser, createOrUpdateUser } from '../services/firebase';
 interface AuthContextType {
   user: User | null;
   spotifyId: string | null;
+  avatarUrl: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   logout: () => void;
@@ -90,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         spotifyId,
+        avatarUrl: user?.avatarURL || null,
         isLoading,
         isAuthenticated: !!user,
         logout,

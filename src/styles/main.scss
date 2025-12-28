@@ -959,6 +959,74 @@ body {
   text-overflow: ellipsis;
 }
 
+// Music Match Widget
+.music-match-widget {
+  background: var(--g-color-base-float);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-l);
+  padding: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+.music-match-header {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
+}
+
+.music-match-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.music-match-title {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: var(--spacing-1);
+}
+
+.music-match-artists {
+  font-size: 13px;
+  color: var(--g-color-text-secondary);
+  line-height: 1.4;
+}
+
+.music-match-progress {
+  margin-bottom: var(--spacing-3);
+}
+
+.music-match-details-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+// Match Dialog
+.match-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.match-dialog-section {
+  // Section styling
+}
+
+.match-dialog-section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--g-color-text-secondary);
+  margin: 0 0 var(--spacing-3);
+}
+
+.match-dialog-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+// Top Albums section
+.top-albums-section {
+  margin-top: var(--spacing-4);
+}
+
 // Empty state
 .empty-state {
   display: flex;
