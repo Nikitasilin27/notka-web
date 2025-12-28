@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Switch, Button, RadioGroup, Radio, Card } from '@gravity-ui/uikit';
+import { Loader, Switch, Button, RadioGroup, Radio, Card, Disclosure } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { Moon, Sun, Globe, PersonPlus, PersonXmark, ChevronRight } from '@gravity-ui/icons';
 import { 
@@ -261,11 +261,15 @@ export function ProfilePage() {
                   />
                 </div>
                 
-                <div className="settings-item settings-item-column">
-                  <div className="settings-item-info">
-                    <Icon data={Globe} size={20} />
-                    <span>{t.language}</span>
-                  </div>
+                <Disclosure
+                  className="language-disclosure"
+                  summary={
+                    <div className="settings-item-info">
+                      <Icon data={Globe} size={20} />
+                      <span>{t.language}</span>
+                    </div>
+                  }
+                >
                   <div className="language-selector">
                     <RadioGroup
                       value={lang}
@@ -274,19 +278,19 @@ export function ProfilePage() {
                     >
                       <Radio value="ru">
                         <div className="language-option">
-                          <span className="language-name">{t.russian}</span>
-                          <span className="language-native">Русский</span>
+                          <span className="language-name">Русский</span>
+                          <span className="language-native">Russian</span>
                         </div>
                       </Radio>
                       <Radio value="en">
                         <div className="language-option">
-                          <span className="language-name">{t.english}</span>
+                          <span className="language-name">English</span>
                           <span className="language-native">English</span>
                         </div>
                       </Radio>
                     </RadioGroup>
                   </div>
-                </div>
+                </Disclosure>
               </div>
             </div>
           )}

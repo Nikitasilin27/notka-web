@@ -80,11 +80,8 @@ export function UsersPage() {
                   {user.currentTrack ? (
                     <div className="listener-track">
                       <span className="listener-pulse" />
-                      <span className="listener-track-name">
-                        {user.currentTrack.trackName}
-                      </span>
-                      <span className="listener-artist">
-                        {user.currentTrack.artistName}
+                      <span className="listener-track-text">
+                        {user.currentTrack.trackName} — {user.currentTrack.artistName}
                       </span>
                     </div>
                   ) : (
