@@ -9,6 +9,9 @@ import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { Loader } from '@gravity-ui/uikit';
 
+// Custom theme - must be imported AFTER Gravity UI
+import './styles/theme.css';
+
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
