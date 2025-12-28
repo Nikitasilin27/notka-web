@@ -1,13 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@gravity-ui/uikit';
 import { AuthProvider, useAuth } from './hooks/useAuth';
-import { Header } from './components/Header';
+import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { CallbackPage } from './pages/CallbackPage';
 import { FeedPage } from './pages/FeedPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { Loader } from '@gravity-ui/uikit';
+
+
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,15 +45,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
-}
-
-function AppLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="app">
-      <Header />
-      <main className="main-content">{children}</main>
-    </div>
-  );
 }
 
 function AppRoutes() {

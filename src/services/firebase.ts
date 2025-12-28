@@ -75,10 +75,13 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
   const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
   const scrobblesRef = collection(db, 'scrobbles');
   
+  // Use odl as odl (Spotify ID) - this is what we use as user identifier for web
+  const odl = scrobble.odl;
+  
   try {
     const duplicateCheck = query(
       scrobblesRef,
-      where('odl', '==', scrobble.odl),
+      where('odl', '==', odl),
       where('trackId', '==', scrobble.trackId),
       where('timestamp', '>=', Timestamp.fromDate(threeMinutesAgo)),
       limit(1)
@@ -95,17 +98,18 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
   }
   
   const docRef = await addDoc(scrobblesRef, {
-    // Сохраняем в формате iOS
+    // iOS-compatible fields
     title: scrobble.title,
     artist: scrobble.artist,
     album: scrobble.album,
-    // Плюс веб-специфичные поля
-    odl: scrobble.odl,
-    trackId: scrobble.trackId,
-    albumArtURL: scrobble.albumArtURL,
     duration: scrobble.duration,
     timestamp: Timestamp.fromDate(scrobble.timestamp),
-    scrobbledAt: Timestamp.fromDate(scrobble.timestamp)
+    scrobbledAt: Timestamp.fromDate(scrobble.timestamp),
+    // User identifier - use odl (Spotify ID) for web users
+    odl: odl,
+    // Also store trackId and albumArt for web
+    trackId: scrobble.trackId,
+    albumArtURL: scrobble.albumArtURL,
   });
   return docRef.id;
 }
@@ -132,6 +136,8 @@ function docToScrobble(doc: any): Scrobble {
 export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Scrobble[]> {
   const scrobblesRef = collection(db, 'scrobbles');
   
+  // Get recent scrobbles and filter by user on client side
+  // This avoids needing a composite index
   const q = query(
     scrobblesRef,
     orderBy('timestamp', 'desc'),

@@ -61,13 +61,13 @@ export function FeedPage() {
   };
 
   return (
-    <div>
+    <div className="feed-page">
       <NowPlaying currentlyPlaying={currentlyPlaying} />
       
-      <div className="tabs-container">
+      <div className="feed-tabs">
         <RadioGroup
           value={activeTab}
-          onUpdate={(value) => setActiveTab(value as TabId)}
+          onUpdate={(value: string) => setActiveTab(value as TabId)}
           options={[
             { value: 'all', content: 'Все скробблы' },
             { value: 'my', content: 'Мои скробблы' },
