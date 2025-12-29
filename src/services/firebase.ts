@@ -170,41 +170,56 @@ export async function getFollowingScrobbles(userId: string, limitCount = 50): Pr
 export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<string | null> {
   const scrobblesRef = collection(db, 'scrobbles');
   const odl = scrobble.odl;
-  const threeMinutesAgo = Date.now() - 3 * 60 * 1000;
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000; // Increased to 5 min
   
-  // Simple duplicate check - get recent scrobbles and filter client-side
-  // This avoids complex index requirements
+  // Duplicate check - get recent scrobbles and filter for this user
   try {
     const recentQuery = query(
       scrobblesRef,
       orderBy('timestamp', 'desc'),
-      limit(50)
+      limit(200) // Get more to ensure we find user's scrobbles
     );
     
     const snapshot = await getDocs(recentQuery);
-    const recentScrobbles = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        odl: data.odl || data.userId || '',
-        userId: data.userId || '',
-        trackId: data.trackId,
-        timestamp: data.timestamp?.toDate() || new Date()
-      };
-    });
     
-    // Check if this exact track was scrobbled by this user in last 3 minutes
-    const isDuplicate = recentScrobbles.some(s => 
-      (s.odl === odl || s.userId === odl) &&
+    // Filter to this user's recent scrobbles
+    const userRecentScrobbles = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          odl: data.odl || data.userId || '',
+          userId: data.userId || '',
+          trackId: data.trackId,
+          timestamp: data.timestamp?.toDate() || new Date()
+        };
+      })
+      .filter(s => s.odl === odl || s.userId === odl);
+    
+    // Check if this exact track was scrobbled by this user in last 5 minutes
+    const isDuplicate = userRecentScrobbles.some(s => 
       s.trackId === scrobble.trackId &&
-      s.timestamp.getTime() > threeMinutesAgo
+      s.timestamp.getTime() > fiveMinutesAgo
     );
     
     if (isDuplicate) {
-      console.log('⏭ Duplicate prevented:', scrobble.title);
+      console.log('⏭ Duplicate prevented (Firebase check):', scrobble.title);
+      return null;
+    }
+    
+    // Also check if this EXACT timestamp already exists (same scrobble)
+    const sameTimestamp = userRecentScrobbles.some(s =>
+      s.trackId === scrobble.trackId &&
+      Math.abs(s.timestamp.getTime() - scrobble.timestamp.getTime()) < 60000 // Within 1 minute
+    );
+    
+    if (sameTimestamp) {
+      console.log('⏭ Same timestamp duplicate prevented:', scrobble.title);
       return null;
     }
   } catch (e) {
-    console.log('Duplicate check error, proceeding:', e);
+    console.log('Duplicate check error, proceeding with caution:', e);
+    // If we can't check, don't add - better safe than duplicate
+    return null;
   }
   
   // Add the scrobble
@@ -247,6 +262,25 @@ function docToScrobble(doc: any): Scrobble {
     scrobbledAt: data.scrobbledAt?.toDate(),
     duration: data.duration
   };
+}
+
+// Get user's last scrobble (for duplicate prevention on page reload)
+export async function getLastUserScrobble(odl: string): Promise<Scrobble | null> {
+  const scrobblesRef = collection(db, 'scrobbles');
+  
+  const q = query(
+    scrobblesRef,
+    orderBy('timestamp', 'desc'),
+    limit(100)
+  );
+  
+  const snapshot = await getDocs(q);
+  
+  const userScrobble = snapshot.docs
+    .map(doc => docToScrobble(doc))
+    .find(s => s.odl === odl || s.userId === odl);
+  
+  return userScrobble || null;
 }
 
 export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Scrobble[]> {
