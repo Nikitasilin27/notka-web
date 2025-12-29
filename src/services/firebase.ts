@@ -221,6 +221,7 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
     userId: odl,
     // Web-specific fields
     trackId: scrobble.trackId,
+    artistId: scrobble.artistId, // Spotify Artist ID for accurate image fetching
     albumArtURL: scrobble.albumArtURL,
   });
   
@@ -236,6 +237,7 @@ function docToScrobble(doc: any): Scrobble {
     odl: data.odl || data.userId || '',
     userId: data.userId,
     trackId: data.trackId,
+    artistId: data.artistId,
     // Поддержка обоих форматов имён полей
     title: data.title || data.trackName || '',
     artist: data.artist || data.artistName || '',

@@ -203,8 +203,10 @@ export interface SpotifyArtist {
 const artistImageCache = new Map<string, string | null>();
 
 export async function getArtistImage(artistName: string): Promise<string | null> {
+  const normalizedName = artistName.toLowerCase().trim();
+  
   // Check cache first
-  const cached = artistImageCache.get(artistName.toLowerCase());
+  const cached = artistImageCache.get(normalizedName);
   if (cached !== undefined) {
     return cached;
   }
@@ -213,27 +215,52 @@ export async function getArtistImage(artistName: string): Promise<string | null>
   if (!token) return null;
   
   try {
+    // Search with artist name in quotes for exact match
     const response = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(artistName)}&type=artist&limit=1`,
+      `https://api.spotify.com/v1/search?q=artist:"${encodeURIComponent(artistName)}"&type=artist&limit=5`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     
     if (!response.ok) {
-      artistImageCache.set(artistName.toLowerCase(), null);
+      artistImageCache.set(normalizedName, null);
       return null;
     }
     
     const data = await response.json();
-    const artist = data.artists?.items?.[0] as SpotifyArtist | undefined;
-    const imageUrl = artist?.images?.[0]?.url || null;
+    const artists = data.artists?.items as SpotifyArtist[] | undefined;
+    
+    if (!artists || artists.length === 0) {
+      artistImageCache.set(normalizedName, null);
+      return null;
+    }
+    
+    // Find exact name match (case-insensitive)
+    let matchedArtist = artists.find(
+      a => a.name.toLowerCase() === normalizedName
+    );
+    
+    // If no exact match, try partial match at start
+    if (!matchedArtist) {
+      matchedArtist = artists.find(
+        a => a.name.toLowerCase().startsWith(normalizedName) ||
+             normalizedName.startsWith(a.name.toLowerCase())
+      );
+    }
+    
+    // Fallback to first result if nothing else matches
+    if (!matchedArtist) {
+      matchedArtist = artists[0];
+    }
+    
+    const imageUrl = matchedArtist?.images?.[0]?.url || null;
     
     // Cache the result
-    artistImageCache.set(artistName.toLowerCase(), imageUrl);
+    artistImageCache.set(normalizedName, imageUrl);
     
     return imageUrl;
   } catch (error) {
     console.error('Error fetching artist image:', error);
-    artistImageCache.set(artistName.toLowerCase(), null);
+    artistImageCache.set(normalizedName, null);
     return null;
   }
 }
@@ -251,6 +278,57 @@ export async function getArtistImages(artistNames: string[]): Promise<Map<string
       results.set(name, image);
     });
     await Promise.all(promises);
+  }
+  
+  return results;
+}
+
+// Get artist by Spotify ID (most accurate)
+export async function getArtistById(artistId: string): Promise<SpotifyArtist | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+  
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/artists/${artistId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching artist by ID:', error);
+    return null;
+  }
+}
+
+// Batch get artists by IDs
+export async function getArtistsByIds(artistIds: string[]): Promise<Map<string, SpotifyArtist>> {
+  const results = new Map<string, SpotifyArtist>();
+  const token = await getValidAccessToken();
+  if (!token) return results;
+  
+  // Spotify allows up to 50 artists per request
+  const batchSize = 50;
+  for (let i = 0; i < artistIds.length; i += batchSize) {
+    const batch = artistIds.slice(i, i + batchSize);
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/artists?ids=${batch.join(',')}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        for (const artist of data.artists || []) {
+          if (artist) {
+            results.set(artist.id, artist);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching artists by IDs:', error);
+    }
   }
   
   return results;

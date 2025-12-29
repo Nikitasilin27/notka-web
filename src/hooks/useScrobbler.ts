@@ -97,6 +97,7 @@ export function useScrobbler(): UseScrobblerReturn {
       const scrobble: Omit<Scrobble, 'id'> = {
         odl: spotifyId,
         trackId: session.trackId,
+        artistId: session.track.artists[0]?.id, // Primary artist ID for accurate image
         title: session.track.name,
         artist: session.track.artists.map(a => a.name).join(', '),
         album: session.track.album.name,

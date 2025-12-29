@@ -24,6 +24,7 @@ export interface Scrobble {
   odl: string;           // Spotify ID (для веба)
   userId?: string;       // Firebase Auth UID (для iOS)
   trackId?: string;
+  artistId?: string;     // Spotify Artist ID for accurate image fetching
   title: string;         // iOS использует title
   artist: string;        // iOS использует artist  
   album?: string;        // iOS использует album
@@ -42,7 +43,7 @@ export interface SpotifyTokens {
 export interface SpotifyTrack {
   id: string;
   name: string;
-  artists: { name: string }[];
+  artists: { id: string; name: string }[];
   album: {
     name: string;
     images: { url: string }[];

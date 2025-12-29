@@ -11,7 +11,7 @@ import {
   unfollowUser,
   getFollowCounts 
 } from '../services/firebase';
-import { getArtistImages } from '../services/spotify';
+import { getArtistsByIds, getArtistImages } from '../services/spotify';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -20,6 +20,7 @@ import { ScrobbleCard } from '../components/ScrobbleCard';
 
 interface TopArtist {
   name: string;
+  artistId?: string;  // Spotify Artist ID for accurate image
   count: number;
   imageUrl?: string;
 }
@@ -126,20 +127,33 @@ export function ProfilePage() {
       setAllScrobbles(scrobblesData);
       setFollowCounts(counts);
       
-      // Calculate top artists
-      const artistMap = new Map<string, { count: number; albumArtUrl?: string }>();
+      // Calculate top artists (store artistId for accurate image fetching)
+      const artistMap = new Map<string, { count: number; artistId?: string; albumArtUrl?: string }>();
       scrobblesData.forEach(scrobble => {
         const normalizedName = normalizeArtistName(scrobble.artist);
         const existing = artistMap.get(normalizedName);
         if (existing) {
           existing.count++;
+          // Prefer artistId if available
+          if (!existing.artistId && scrobble.artistId) {
+            existing.artistId = scrobble.artistId;
+          }
         } else {
-          artistMap.set(normalizedName, { count: 1, albumArtUrl: scrobble.albumArtURL });
+          artistMap.set(normalizedName, { 
+            count: 1, 
+            artistId: scrobble.artistId,
+            albumArtUrl: scrobble.albumArtURL 
+          });
         }
       });
       
-      const topArtistsList = Array.from(artistMap.entries())
-        .map(([name, data]) => ({ name, count: data.count, imageUrl: data.albumArtUrl }))
+      const topArtistsList: TopArtist[] = Array.from(artistMap.entries())
+        .map(([name, data]) => ({ 
+          name, 
+          artistId: data.artistId,
+          count: data.count, 
+          imageUrl: data.albumArtUrl 
+        }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
       
@@ -169,15 +183,43 @@ export function ProfilePage() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
       
-      // Fetch artist images from Spotify, then set both
+      // Fetch artist images - prefer by ID, fallback to name search
       try {
-        const artistNames = topArtistsList.map(a => a.name);
-        const imageMap = await getArtistImages(artistNames);
+        // Collect artists with IDs and without
+        const artistsWithIds = topArtistsList.filter(a => a.artistId);
+        const artistsWithoutIds = topArtistsList.filter(a => !a.artistId);
         
-        const artistsWithImages = topArtistsList.map(artist => ({
-          ...artist,
-          imageUrl: imageMap.get(artist.name) || artist.imageUrl
-        }));
+        // Fetch by ID (most accurate)
+        let idImageMap = new Map<string, string>();
+        if (artistsWithIds.length > 0) {
+          const ids = artistsWithIds.map(a => a.artistId!);
+          const artistData = await getArtistsByIds(ids);
+          artistData.forEach((artist, id) => {
+            if (artist.images?.[0]?.url) {
+              idImageMap.set(id, artist.images[0].url);
+            }
+          });
+        }
+        
+        // Fetch by name (fallback for old scrobbles without artistId)
+        let nameImageMap = new Map<string, string | null>();
+        if (artistsWithoutIds.length > 0) {
+          const names = artistsWithoutIds.map(a => a.name);
+          nameImageMap = await getArtistImages(names);
+        }
+        
+        // Merge results
+        const artistsWithImages = topArtistsList.map(artist => {
+          let imageUrl = artist.imageUrl; // Default: album art
+          
+          if (artist.artistId && idImageMap.has(artist.artistId)) {
+            imageUrl = idImageMap.get(artist.artistId)!;
+          } else if (nameImageMap.has(artist.name) && nameImageMap.get(artist.name)) {
+            imageUrl = nameImageMap.get(artist.name)!;
+          }
+          
+          return { ...artist, imageUrl };
+        });
         
         setTopArtists(artistsWithImages);
         setTopAlbums(topAlbumsList);
