@@ -181,7 +181,7 @@ body {
   min-height: 100dvh;
   padding: var(--spacing-6); // 24px
   text-align: center;
-  gap: var(--spacing-8); // 32px
+  gap: var(--spacing-6); // 24px
 }
 
 .login-logo {
@@ -213,6 +213,52 @@ body {
   .login-subtitle {
     font-size: 16px;
   }
+}
+
+.login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3); // 12px
+  width: 100%;
+  max-width: 320px;
+}
+
+.login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3); // 12px
+  width: 100%;
+  position: relative;
+  
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.login-button-spotify {
+  background-color: #1DB954 !important;
+  
+  &:hover {
+    background-color: #1ed760 !important;
+  }
+}
+
+.login-button-apple,
+.login-button-yandex {
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.login-button-badge {
+  position: absolute;
+  right: 12px;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--g-color-base-misc-light);
+  border-radius: var(--g-border-radius-s);
+  color: var(--g-color-text-secondary);
 }
 
 .spotify-button {
@@ -1151,4 +1197,82 @@ body {
 .language-native {
   font-size: 13px;
   color: var(--g-color-text-secondary);
+}
+
+// Settings logout button
+.settings-logout {
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--g-color-line-generic);
+}
+
+// Skeleton for artist tiles
+.skeleton-tile {
+  background: var(--g-color-base-float);
+}
+
+.skeleton-image {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--g-border-radius-m);
+}
+
+// Dialog mobile responsiveness
+@media (max-width: 768px) {
+  .g-dialog {
+    margin: 0 !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+  }
+  
+  .g-dialog__content {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: var(--spacing-4) !important;
+    max-height: calc(100vh - 32px) !important;
+    max-height: calc(100dvh - 32px) !important;
+  }
+  
+  .artist-dialog .g-dialog__content,
+  .match-dialog .g-dialog__content {
+    width: calc(100% - 32px) !important;
+  }
+  
+  .match-dialog-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+// Now playing skeleton
+.now-playing-skeleton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+}
+
+.now-playing-skeleton-image {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--g-border-radius-m);
+}
+
+.now-playing-skeleton-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.now-playing-skeleton-line {
+  height: 16px;
+  border-radius: var(--g-border-radius-s);
+  
+  &:first-child {
+    width: 70%;
+  }
+  
+  &:last-child {
+    width: 50%;
+  }
 }

@@ -12,7 +12,7 @@ type TabId = 'all' | 'following' | 'my';
 
 export function FeedPage() {
   const { spotifyId } = useAuth();
-  const { currentlyPlaying } = useScrobbler();
+  const { currentlyPlaying, isLoading: isScrobblerLoading } = useScrobbler();
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
@@ -87,7 +87,7 @@ export function FeedPage() {
   return (
     <div className="feed-page">
       <div className="feed-sticky-header">
-        <NowPlaying currentlyPlaying={currentlyPlaying} />
+        <NowPlaying currentlyPlaying={currentlyPlaying} isLoading={isScrobblerLoading} />
         
         <div className="feed-tabs">
           <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>

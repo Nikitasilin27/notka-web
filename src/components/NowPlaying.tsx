@@ -1,10 +1,28 @@
+import { Skeleton } from '@gravity-ui/uikit';
 import { SpotifyCurrentlyPlaying } from '../types';
+import { useI18n } from '../hooks/useI18n';
 
 interface NowPlayingProps {
   currentlyPlaying: SpotifyCurrentlyPlaying | null;
+  isLoading?: boolean;
 }
 
-export function NowPlaying({ currentlyPlaying }: NowPlayingProps) {
+export function NowPlaying({ currentlyPlaying, isLoading }: NowPlayingProps) {
+  const { lang } = useI18n();
+  
+  // Show skeleton while loading
+  if (isLoading) {
+    return (
+      <div className="now-playing">
+        <Skeleton className="now-playing-art" style={{ width: 56, height: 56 }} />
+        <div className="now-playing-info" style={{ flex: 1 }}>
+          <Skeleton style={{ width: '70%', height: 18, marginBottom: 6 }} />
+          <Skeleton style={{ width: '50%', height: 14 }} />
+        </div>
+      </div>
+    );
+  }
+  
   if (!currentlyPlaying?.item) {
     return (
       <div className="now-playing">
@@ -18,8 +36,12 @@ export function NowPlaying({ currentlyPlaying }: NowPlayingProps) {
           🎵
         </div>
         <div className="now-playing-info">
-          <div className="now-playing-track">Ничего не играет</div>
-          <div className="now-playing-artist">Включи музыку в Spotify</div>
+          <div className="now-playing-track">
+            {lang === 'ru' ? 'Ничего не играет' : 'Nothing playing'}
+          </div>
+          <div className="now-playing-artist">
+            {lang === 'ru' ? 'Включи музыку в Spotify' : 'Play music on Spotify'}
+          </div>
         </div>
       </div>
     );
@@ -53,7 +75,7 @@ export function NowPlaying({ currentlyPlaying }: NowPlayingProps) {
         {currentlyPlaying.is_playing && (
           <>
             <span className="now-playing-pulse" />
-            Сейчас играет
+            {lang === 'ru' ? 'Сейчас играет' : 'Now playing'}
           </>
         )}
       </div>

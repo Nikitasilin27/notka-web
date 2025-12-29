@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { Switch, RadioGroup, Radio } from '@gravity-ui/uikit';
+import { Switch, RadioGroup, Radio, Button } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { Moon, Sun, Globe, ChevronDown, ChevronUp } from '@gravity-ui/icons';
+import { Moon, Sun, Globe, ChevronDown, ChevronUp, ArrowRightFromSquare } from '@gravity-ui/icons';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n, Language } from '../hooks/useI18n';
+import { useAuth } from '../hooks/useAuth';
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { t, lang, setLang } = useI18n();
+  const { logout } = useAuth();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/';
+  };
 
   return (
     <div className="settings-page">
@@ -63,6 +70,19 @@ export function SettingsPage() {
               </RadioGroup>
             </div>
           )}
+        </div>
+
+        {/* Logout button - primarily for mobile */}
+        <div className="settings-logout">
+          <Button
+            view="outlined-danger"
+            size="l"
+            width="max"
+            onClick={handleLogout}
+          >
+            <Icon data={ArrowRightFromSquare} size={16} />
+            {t.logout}
+          </Button>
         </div>
       </div>
     </div>
