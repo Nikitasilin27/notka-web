@@ -168,49 +168,46 @@ export async function getFollowingScrobbles(userId: string, limitCount = 50): Pr
 
 // Scrobble operations - совместимы с iOS структурой
 export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<string | null> {
-  // Check for duplicate first (same user, same track, within last 3 minutes)
-  const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
   const scrobblesRef = collection(db, 'scrobbles');
-  
-  // Use odl (Spotify ID) as user identifier
   const odl = scrobble.odl;
+  const threeMinutesAgo = Date.now() - 3 * 60 * 1000;
   
-  // Check duplicates by both odl and userId fields
+  // Simple duplicate check - get recent scrobbles and filter client-side
+  // This avoids complex index requirements
   try {
-    // Check by odl
-    const duplicateCheckOdl = query(
+    const recentQuery = query(
       scrobblesRef,
-      where('odl', '==', odl),
-      where('trackId', '==', scrobble.trackId),
-      where('timestamp', '>=', Timestamp.fromDate(threeMinutesAgo)),
-      limit(1)
+      orderBy('timestamp', 'desc'),
+      limit(50)
     );
     
-    const existingOdl = await getDocs(duplicateCheckOdl);
-    if (!existingOdl.empty) {
-      console.log('Duplicate scrobble prevented (odl):', scrobble.title);
-      return null;
-    }
+    const snapshot = await getDocs(recentQuery);
+    const recentScrobbles = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        odl: data.odl || data.userId || '',
+        userId: data.userId || '',
+        trackId: data.trackId,
+        timestamp: data.timestamp?.toDate() || new Date()
+      };
+    });
     
-    // Also check by userId (iOS compatibility)
-    const duplicateCheckUserId = query(
-      scrobblesRef,
-      where('userId', '==', odl),
-      where('trackId', '==', scrobble.trackId),
-      where('timestamp', '>=', Timestamp.fromDate(threeMinutesAgo)),
-      limit(1)
+    // Check if this exact track was scrobbled by this user in last 3 minutes
+    const isDuplicate = recentScrobbles.some(s => 
+      (s.odl === odl || s.userId === odl) &&
+      s.trackId === scrobble.trackId &&
+      s.timestamp.getTime() > threeMinutesAgo
     );
     
-    const existingUserId = await getDocs(duplicateCheckUserId);
-    if (!existingUserId.empty) {
-      console.log('Duplicate scrobble prevented (userId):', scrobble.title);
+    if (isDuplicate) {
+      console.log('⏭ Duplicate prevented:', scrobble.title);
       return null;
     }
   } catch (e) {
-    // Index might not exist, continue with scrobble
-    console.log('Duplicate check skipped (index missing)');
+    console.log('Duplicate check error, proceeding:', e);
   }
   
+  // Add the scrobble
   const docRef = await addDoc(scrobblesRef, {
     // Core fields (iOS-compatible)
     title: scrobble.title,
@@ -226,6 +223,8 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
     trackId: scrobble.trackId,
     albumArtURL: scrobble.albumArtURL,
   });
+  
+  console.log('✓ Scrobbled:', scrobble.title);
   return docRef.id;
 }
 
@@ -251,41 +250,8 @@ function docToScrobble(doc: any): Scrobble {
 export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Scrobble[]> {
   const scrobblesRef = collection(db, 'scrobbles');
   
-  // Query by userId (iOS format) - more reliable if index exists
-  try {
-    const qUserId = query(
-      scrobblesRef,
-      where('userId', '==', odl),
-      orderBy('timestamp', 'desc'),
-      limit(limitCount)
-    );
-    
-    const snapshotUserId = await getDocs(qUserId);
-    if (!snapshotUserId.empty) {
-      return snapshotUserId.docs.map(doc => docToScrobble(doc));
-    }
-  } catch {
-    // Index might not exist
-  }
-  
-  // Fallback: Query by odl (web format)
-  try {
-    const qOdl = query(
-      scrobblesRef,
-      where('odl', '==', odl),
-      orderBy('timestamp', 'desc'),
-      limit(limitCount)
-    );
-    
-    const snapshotOdl = await getDocs(qOdl);
-    if (!snapshotOdl.empty) {
-      return snapshotOdl.docs.map(doc => docToScrobble(doc));
-    }
-  } catch {
-    // Index might not exist
-  }
-  
-  // Final fallback: Get recent scrobbles and filter client-side
+  // Get recent scrobbles and filter client-side
+  // This is simpler and works without special indexes
   const q = query(
     scrobblesRef,
     orderBy('timestamp', 'desc'),
