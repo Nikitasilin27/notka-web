@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton } from '@gravity-ui/uikit';
+import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { PersonPlus, PersonXmark, ChevronRight, ChevronUp } from '@gravity-ui/icons';
+import { PersonPlus, PersonXmark, Magnifier } from '@gravity-ui/icons';
 import { 
   getUser, 
   getUserScrobbles, 
@@ -56,7 +56,6 @@ export function ProfilePage() {
   const { t, lang } = useI18n();
   
   const [user, setUser] = useState<User | null>(null);
-  const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [allScrobbles, setAllScrobbles] = useState<Scrobble[]>([]);
   const [topArtists, setTopArtists] = useState<TopArtist[]>([]);
   const [topAlbums, setTopAlbums] = useState<TopAlbum[]>([]);
@@ -68,8 +67,9 @@ export function ProfilePage() {
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Pagination and search
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [selectedArtist, setSelectedArtist] = useState<TopArtist | null>(null);
   const [artistInfo, setArtistInfo] = useState<WikipediaArtistInfo | null>(null);
@@ -81,6 +81,28 @@ export function ProfilePage() {
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
+
+  // Filter scrobbles based on search
+  const filteredScrobbles = useMemo(() => {
+    if (!searchQuery.trim()) return allScrobbles;
+    const query = searchQuery.toLowerCase();
+    return allScrobbles.filter(s => 
+      s.title.toLowerCase().includes(query) ||
+      s.artist.toLowerCase().includes(query) ||
+      s.album?.toLowerCase().includes(query)
+    );
+  }, [allScrobbles, searchQuery]);
+
+  // Paginated scrobbles
+  const paginatedScrobbles = useMemo(() => {
+    const start = (currentPage - 1) * TRACKS_PER_PAGE;
+    return filteredScrobbles.slice(start, start + TRACKS_PER_PAGE);
+  }, [filteredScrobbles, currentPage]);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (!targetOdl) return;
@@ -96,13 +118,12 @@ export function ProfilePage() {
     try {
       const [userData, scrobblesData, counts] = await Promise.all([
         getUser(targetOdl),
-        getUserScrobbles(targetOdl, 100),
+        getUserScrobbles(targetOdl, 500),
         getFollowCounts(targetOdl)
       ]);
       
       setUser(userData);
       setAllScrobbles(scrobblesData);
-      setScrobbles(scrobblesData.slice(0, 10));
       setFollowCounts(counts);
       
       // Calculate top artists
@@ -293,8 +314,12 @@ export function ProfilePage() {
     }
   };
 
-  const lastScrobble = scrobbles.length > 0 ? scrobbles[0] : null;
-  
+  // Current track from user data (real-time listening status)
+  const currentTrack = user?.currentTrack;
+  const isCurrentlyPlaying = currentTrack && 
+    currentTrack.timestamp && 
+    (Date.now() - new Date(currentTrack.timestamp).getTime()) < 10 * 60 * 1000; // Within 10 min
+
   const stats = {
     scrobbles: allScrobbles.length,
     artists: new Set(allScrobbles.map(s => normalizeArtistName(s.artist))).size,
@@ -333,8 +358,10 @@ export function ProfilePage() {
     <div className="profile-page">
       {/* Hero Header */}
       <div className="profile-hero">
-        {lastScrobble?.albumArtURL && (
-          <div className="profile-hero-bg" style={{ backgroundImage: `url(${lastScrobble.albumArtURL})` }} />
+        {(isCurrentlyPlaying ? currentTrack?.albumArtURL : allScrobbles[0]?.albumArtURL) && (
+          <div className="profile-hero-bg" style={{ 
+            backgroundImage: `url(${isCurrentlyPlaying ? currentTrack?.albumArtURL : allScrobbles[0]?.albumArtURL})` 
+          }} />
         )}
         
         <div className="profile-hero-content">
@@ -363,12 +390,18 @@ export function ProfilePage() {
               )}
             </div>
             
-            {lastScrobble && (
-              <div className="profile-hero-listening">
-                {lastScrobble.title} — {lastScrobble.artist}
-                <span className="profile-hero-time">{formatTimeI18n(lastScrobble.timestamp, t)}</span>
-              </div>
-            )}
+            <div className="profile-hero-listening">
+              {isCurrentlyPlaying ? (
+                <>
+                  <span className="now-playing-indicator" />
+                  {currentTrack?.trackName} — {currentTrack?.artistName}
+                </>
+              ) : (
+                <span className="not-playing">
+                  {lang === 'ru' ? 'Сейчас ничего не слушает' : 'Not listening right now'}
+                </span>
+              )}
+            </div>
             
             <div className="profile-hero-stats">
               <div className="profile-hero-stat">
@@ -393,26 +426,34 @@ export function ProfilePage() {
           <div className="section">
             <div className="section-header">
               <h2 className="section-title">{t.recentTracks}</h2>
-              {isExpanded && (
-                <Button view="flat" size="s" onClick={() => { setIsExpanded(false); setCurrentPage(1); }}>
-                  <Icon data={ChevronUp} size={14} />
-                  {lang === 'ru' ? 'Свернуть' : 'Collapse'}
-                </Button>
-              )}
+              <TextInput
+                placeholder={lang === 'ru' ? 'Поиск треков...' : 'Search tracks...'}
+                value={searchQuery}
+                onUpdate={setSearchQuery}
+                size="m"
+                startContent={<Icon data={Magnifier} size={16} />}
+                hasClear
+                className="track-search-input"
+                validationState={searchQuery && filteredScrobbles.length === 0 ? 'invalid' : undefined}
+                errorMessage={lang === 'ru' ? 'Трек не найден' : 'Track not found'}
+                errorPlacement="inside"
+              />
             </div>
             
-            {scrobbles.length === 0 ? (
+            {allScrobbles.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">🎧</div>
                 <p>{isOwnProfile ? t.turnOnSpotify : t.noScrobbles}</p>
               </div>
+            ) : filteredScrobbles.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🔍</div>
+                <p>{lang === 'ru' ? 'Ничего не найдено' : 'Nothing found'}</p>
+              </div>
             ) : (
               <>
                 <div className="feed">
-                  {(isExpanded 
-                    ? allScrobbles.slice((currentPage - 1) * TRACKS_PER_PAGE, currentPage * TRACKS_PER_PAGE)
-                    : scrobbles
-                  ).map((scrobble) => (
+                  {paginatedScrobbles.map((scrobble) => (
                     <ScrobbleCard
                       key={scrobble.id}
                       scrobble={scrobble}
@@ -422,20 +463,15 @@ export function ProfilePage() {
                   ))}
                 </div>
                 
-                {isExpanded ? (
+                {filteredScrobbles.length > TRACKS_PER_PAGE && (
                   <div className="pagination-container">
                     <Pagination
                       page={currentPage}
                       pageSize={TRACKS_PER_PAGE}
-                      total={allScrobbles.length}
+                      total={filteredScrobbles.length}
                       onUpdate={(page) => setCurrentPage(page)}
                     />
                   </div>
-                ) : allScrobbles.length > 10 && (
-                  <Button view="flat" size="l" width="max" onClick={() => setIsExpanded(true)} className="show-more-button">
-                    {lang === 'ru' ? 'Показать больше' : 'Show more'}
-                    <Icon data={ChevronRight} size={16} />
-                  </Button>
                 )}
               </>
             )}
@@ -470,7 +506,6 @@ export function ProfilePage() {
               <Progress value={musicMatch.percentage} size="s" theme="success" className="music-match-progress" />
               <Button view="flat" size="s" onClick={() => setIsMatchDialogOpen(true)} className="music-match-details-btn">
                 {lang === 'ru' ? 'Подробнее' : 'Details'}
-                <Icon data={ChevronRight} size={14} />
               </Button>
             </div>
           )}
