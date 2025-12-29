@@ -132,45 +132,6 @@ body {
   --gn-aside-header-item-current-icon-color: var(--notka-brand);
 }
 
-.aside-footer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1); // 4px
-  padding: var(--spacing-2) var(--spacing-3); // 8px 12px - match menu padding
-}
-
-.settings-button,
-.logout-button {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3); // 12px
-  width: 100%;
-  padding: var(--spacing-2) var(--spacing-2); // 8px - match menu items
-  background: none;
-  border: none;
-  color: var(--g-color-text-secondary);
-  cursor: pointer;
-  border-radius: var(--g-border-radius-xs);
-  font-size: 13px;
-  transition: background 0.2s, color 0.2s;
-  
-  svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-  
-  &:hover {
-    background: var(--g-color-base-simple-hover);
-    color: var(--g-color-text-primary);
-  }
-  
-  &.active {
-    color: var(--notka-brand);
-    background: var(--g-color-base-simple-hover);
-  }
-}
-
 // Login page
 .login-page {
   display: flex;
