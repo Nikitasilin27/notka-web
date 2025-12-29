@@ -52,12 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseUser = newUser;
       } else {
         // Update name and avatar from Spotify if changed
-        await createOrUpdateUser({
+        const updatedUser: User = {
           odl: spotifyUser.id,
           name: spotifyUser.display_name || firebaseUser.name,
           avatarURL: spotifyUser.images?.[0]?.url || firebaseUser.avatarURL,
-        });
-        firebaseUser = await getUser(spotifyUser.id);
+        };
+        await createOrUpdateUser(updatedUser);
+        firebaseUser = updatedUser;
       }
 
       setUser(firebaseUser);

@@ -45,10 +45,17 @@ interface Translations {
   minAgo: string;
   hAgo: string;
   dAgo: string;
-  
+
   // Languages
   russian: string;
   english: string;
+
+  // Auth / Callback
+  authCancelled: string;
+  authCodeMissing: string;
+  authError: string;
+  redirecting: string;
+  authorizing: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -99,6 +106,13 @@ const translations: Record<Language, Translations> = {
     // Languages
     russian: 'Русский',
     english: 'English',
+
+    // Auth / Callback
+    authCancelled: 'Авторизация отменена',
+    authCodeMissing: 'Код авторизации не получен',
+    authError: 'Ошибка авторизации',
+    redirecting: 'Перенаправляем...',
+    authorizing: 'Авторизация...',
   },
   en: {
     // Navigation
@@ -147,6 +161,13 @@ const translations: Record<Language, Translations> = {
     // Languages
     russian: 'Русский',
     english: 'English',
+
+    // Auth / Callback
+    authCancelled: 'Authorization cancelled',
+    authCodeMissing: 'Authorization code not received',
+    authError: 'Authorization error',
+    redirecting: 'Redirecting...',
+    authorizing: 'Authorizing...',
   }
 };
 

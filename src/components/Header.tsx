@@ -1,9 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../hooks/useI18n';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const location = useLocation();
 
   return (
@@ -18,34 +20,34 @@ export function Header() {
           size="m"
           href="/"
         >
-          Лента
+          {t.feed}
         </Button>
         <Button
           view={location.pathname === '/users' ? 'outlined-info' : 'flat'}
           size="m"
           href="/users"
         >
-          Слушатели
+          {t.listeners}
         </Button>
         <Button
           view={location.pathname === '/profile' ? 'outlined-info' : 'flat'}
           size="m"
           href="/profile"
         >
-          Профиль
+          {t.profile}
         </Button>
       </nav>
 
       <div className="header-user">
         {user && (
           <>
-            <img 
-              src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'} 
+            <img
+              src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'}
               alt={user.name}
               style={{ width: 32, height: 32, borderRadius: '50%' }}
             />
             <Button view="flat" size="m" onClick={logout}>
-              Выйти
+              {t.logout}
             </Button>
           </>
         )}

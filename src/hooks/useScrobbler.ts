@@ -39,7 +39,11 @@ if (typeof window !== 'undefined') {
       globalState.initialized = false;
     }
   };
-  document.removeEventListener('visibilitychange', resetOnVisible);
+  // Clean up any existing listener before adding a new one
+  if (typeof (window as any).__scrobblerVisibilityHandler === 'function') {
+    document.removeEventListener('visibilitychange', (window as any).__scrobblerVisibilityHandler);
+  }
+  (window as any).__scrobblerVisibilityHandler = resetOnVisible;
   document.addEventListener('visibilitychange', resetOnVisible);
 }
 

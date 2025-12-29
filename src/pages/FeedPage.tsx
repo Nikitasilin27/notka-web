@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader, TabProvider, TabList, Tab } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
@@ -19,16 +19,10 @@ export function FeedPage() {
   const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadScrobbles();
-    const interval = setInterval(loadScrobbles, 30000);
-    return () => clearInterval(interval);
-  }, [activeTab, spotifyId]);
-
-  const loadScrobbles = async () => {
+  const loadScrobbles = useCallback(async () => {
     try {
       let data: Scrobble[] = [];
-      
+
       if (activeTab === 'all') {
         data = await getRecentScrobbles(50);
       } else if (activeTab === 'following' && spotifyId) {
@@ -36,7 +30,7 @@ export function FeedPage() {
       } else if (activeTab === 'my' && spotifyId) {
         data = await getUserScrobbles(spotifyId, 50);
       }
-      
+
       setScrobbles(data);
 
       // Load user info for scrobbles
@@ -52,7 +46,13 @@ export function FeedPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab, spotifyId]);
+
+  useEffect(() => {
+    loadScrobbles();
+    const interval = setInterval(loadScrobbles, 30000);
+    return () => clearInterval(interval);
+  }, [loadScrobbles]);
 
   const renderEmptyState = () => {
     if (activeTab === 'following') {

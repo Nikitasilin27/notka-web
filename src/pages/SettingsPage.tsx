@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Switch, RadioGroup, Radio, Button } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { Moon, Sun, Globe, ChevronDown, ChevronUp, ArrowRightFromSquare } from '@gravity-ui/icons';
@@ -10,11 +11,12 @@ export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { t, lang, setLang } = useI18n();
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/';
+    navigate('/login');
   };
 
   return (

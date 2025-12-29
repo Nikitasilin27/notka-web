@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
@@ -82,29 +82,24 @@ export function ProfilePage() {
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
 
-  useEffect(() => {
+  const loadProfile = useCallback(async () => {
     if (!targetOdl) return;
-    loadProfile();
-  }, [targetOdl, spotifyId]);
 
-  const loadProfile = async () => {
-    if (!targetOdl) return;
-    
     setIsLoading(true);
     setIsArtistsLoading(true);
-    
+
     try {
       const [userData, scrobblesData, counts] = await Promise.all([
         getUser(targetOdl),
         getUserScrobbles(targetOdl, 100),
         getFollowCounts(targetOdl)
       ]);
-      
+
       setUser(userData);
       setAllScrobbles(scrobblesData);
       setScrobbles(scrobblesData.slice(0, 10));
       setFollowCounts(counts);
-      
+
       // Calculate top artists
       const artistMap = new Map<string, { count: number; albumArtUrl?: string }>();
       scrobblesData.forEach(scrobble => {
@@ -116,12 +111,12 @@ export function ProfilePage() {
           artistMap.set(normalizedName, { count: 1, albumArtUrl: scrobble.albumArtURL });
         }
       });
-      
+
       const topArtistsList = Array.from(artistMap.entries())
         .map(([name, data]) => ({ name, count: data.count, imageUrl: data.albumArtUrl }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
-      
+
       // Calculate top albums
       const albumMap = new Map<string, { artist: string; count: number; imageUrl?: string }>();
       scrobblesData.forEach(scrobble => {
@@ -137,7 +132,7 @@ export function ProfilePage() {
           });
         }
       });
-      
+
       const topAlbumsList = Array.from(albumMap.entries())
         .map(([key, data]) => ({
           name: key.split('|||')[0],
@@ -147,31 +142,31 @@ export function ProfilePage() {
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
-      
+
       // Fetch artist images from Spotify, then set both
       try {
         const artistNames = topArtistsList.map(a => a.name);
         const imageMap = await getArtistImages(artistNames);
-        
+
         const artistsWithImages = topArtistsList.map(artist => ({
           ...artist,
           imageUrl: imageMap.get(artist.name) || artist.imageUrl
         }));
-        
+
         setTopArtists(artistsWithImages);
         setTopAlbums(topAlbumsList);
       } catch {
         setTopArtists(topArtistsList);
         setTopAlbums(topAlbumsList);
       }
-      
+
       setIsArtistsLoading(false);
-      
+
       // Load music match for other profiles
       if (spotifyId && targetOdl && spotifyId !== targetOdl) {
         const following = await isFollowing(spotifyId, targetOdl);
         setFollowStatus(following);
-        
+
         const myData = await getUserScrobbles(spotifyId, 100);
         const match = calculateMusicMatch(myData, scrobblesData, topArtistsList);
         setMusicMatch(match);
@@ -181,7 +176,12 @@ export function ProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [targetOdl, spotifyId]);
+
+  useEffect(() => {
+    if (!targetOdl) return;
+    loadProfile();
+  }, [targetOdl, loadProfile]);
 
   const calculateMusicMatch = (
     myScrobbles: Scrobble[], 
