@@ -223,8 +223,8 @@ body {
   max-width: 320px;
 }
 
-.login-buttons .g-button {
-  gap: var(--spacing-3); // 12px between icon and text
+.login-btn {
+  gap: var(--spacing-2) !important; // 8px between icon and text
 }
 
 .login-hint {
