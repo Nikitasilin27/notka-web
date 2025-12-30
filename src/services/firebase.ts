@@ -265,7 +265,10 @@ function docToScrobble(doc: any): Scrobble {
     albumArtURL: data.albumArtURL,
     timestamp: data.timestamp?.toDate() || data.scrobbledAt?.toDate() || new Date(),
     scrobbledAt: data.scrobbledAt?.toDate(),
-    duration: data.duration
+    duration: data.duration,
+    // Like fields
+    isLikedOnSpotify: data.isLikedOnSpotify || false,
+    likesCount: data.likesCount || 0,
   };
 }
 

@@ -369,6 +369,14 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1); // 4px
+}
+
+.spotify-like-badge {
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -416,6 +424,66 @@ body {
   color: var(--g-color-text-hint);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.scrobble-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2); // 8px
+  flex-shrink: 0;
+}
+
+.like-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1); // 4px
+  padding: var(--spacing-1) var(--spacing-2); // 4px 8px
+  background: transparent;
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-s);
+  color: var(--g-color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  
+  &:hover:not(:disabled) {
+    background: var(--g-color-base-simple-hover);
+    border-color: var(--g-color-line-generic-hover);
+    color: var(--g-color-text-primary);
+  }
+  
+  &.liked {
+    color: #ff4d6a;
+    border-color: rgba(255, 77, 106, 0.3);
+    
+    &:hover:not(:disabled) {
+      background: rgba(255, 77, 106, 0.1);
+    }
+  }
+  
+  &.loading {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.likes-count {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.likes-count-static {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1); // 4px
+  color: #ff4d6a;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 // Listeners list (iOS style cards)

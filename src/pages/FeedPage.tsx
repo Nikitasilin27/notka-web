@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader, TabProvider, TabList, Tab } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
-import { getRecentScrobbles, getUserScrobbles, getFollowingScrobbles, getUser } from '../services/firebase';
+import { 
+  getRecentScrobbles, 
+  getUserScrobbles, 
+  getFollowingScrobbles, 
+  getUser,
+  likeScrobble,
+  unlikeScrobble,
+  checkLikedScrobbles
+} from '../services/firebase';
 import { Scrobble, User } from '../types';
 import { NowPlaying } from '../components/NowPlaying';
 import { ScrobbleCard } from '../components/ScrobbleCard';
@@ -11,12 +19,13 @@ import { ScrobbleCard } from '../components/ScrobbleCard';
 type TabId = 'all' | 'following' | 'my';
 
 export function FeedPage() {
-  const { spotifyId } = useAuth();
+  const { spotifyId, user, avatarUrl } = useAuth();
   const { currentlyPlaying, isLoading: isScrobblerLoading } = useScrobbler();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());
+  const [likedScrobbleIds, setLikedScrobbleIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -47,12 +56,43 @@ export function FeedPage() {
         if (user) map.set(user.odl, user);
       });
       setUsersMap(map);
+      
+      // Check which scrobbles current user has liked
+      if (spotifyId && data.length > 0) {
+        const scrobbleIds = data.map(s => s.id);
+        const likedIds = await checkLikedScrobbles(spotifyId, scrobbleIds);
+        setLikedScrobbleIds(likedIds);
+      }
     } catch (error) {
       console.error('Error loading scrobbles:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleLike = useCallback(async (scrobble: Scrobble) => {
+    if (!spotifyId) return;
+    
+    await likeScrobble(scrobble, {
+      odl: spotifyId,
+      name: user?.name || 'User',
+      avatar: avatarUrl || undefined
+    });
+    
+    setLikedScrobbleIds(prev => new Set([...prev, scrobble.id]));
+  }, [spotifyId, user?.name, avatarUrl]);
+
+  const handleUnlike = useCallback(async (scrobbleId: string) => {
+    if (!spotifyId) return;
+    
+    await unlikeScrobble(spotifyId, scrobbleId);
+    
+    setLikedScrobbleIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(scrobbleId);
+      return newSet;
+    });
+  }, [spotifyId]);
 
   const renderEmptyState = () => {
     if (activeTab === 'following') {
@@ -109,15 +149,23 @@ export function FeedPage() {
           renderEmptyState()
         ) : (
           <div className="feed">
-            {scrobbles.map((scrobble) => (
-              <ScrobbleCard
-                key={scrobble.id}
-                scrobble={scrobble}
-                user={usersMap.get(scrobble.odl)}
-                timeAgo={formatTimeI18n(scrobble.timestamp, t)}
-                showUser={activeTab !== 'my'}
-              />
-            ))}
+            {scrobbles.map((scrobble) => {
+              const isOwnScrobble = scrobble.odl === spotifyId;
+              return (
+                <ScrobbleCard
+                  key={scrobble.id}
+                  scrobble={scrobble}
+                  user={usersMap.get(scrobble.odl)}
+                  timeAgo={formatTimeI18n(scrobble.timestamp, t)}
+                  showUser={activeTab !== 'my'}
+                  isLiked={likedScrobbleIds.has(scrobble.id)}
+                  onLike={() => handleLike(scrobble)}
+                  onUnlike={() => handleUnlike(scrobble.id)}
+                  canLike={!isOwnScrobble && !!spotifyId}
+                  lang={lang}
+                />
+              );
+            })}
           </div>
         )}
       </div>

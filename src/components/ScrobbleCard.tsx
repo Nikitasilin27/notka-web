@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Icon, Tooltip } from '@gravity-ui/uikit';
+import { Heart, HeartFill } from '@gravity-ui/icons';
 import { Scrobble, User } from '../types';
 
 interface ScrobbleCardProps {
@@ -6,9 +9,48 @@ interface ScrobbleCardProps {
   user?: User;
   timeAgo: string;
   showUser?: boolean;
+  // Like props
+  isLiked?: boolean;
+  onLike?: () => Promise<void>;
+  onUnlike?: () => Promise<void>;
+  canLike?: boolean; // false for own scrobbles
+  lang?: string;
 }
 
-export function ScrobbleCard({ scrobble, user, timeAgo, showUser = true }: ScrobbleCardProps) {
+export function ScrobbleCard({ 
+  scrobble, 
+  user, 
+  timeAgo, 
+  showUser = true,
+  isLiked = false,
+  onLike,
+  onUnlike,
+  canLike = true,
+  lang = 'ru'
+}: ScrobbleCardProps) {
+  const [isLiking, setIsLiking] = useState(false);
+  const [localLiked, setLocalLiked] = useState(isLiked);
+  const [localLikesCount, setLocalLikesCount] = useState(scrobble.likesCount || 0);
+
+  const handleLikeClick = async () => {
+    if (isLiking || !canLike) return;
+    
+    setIsLiking(true);
+    try {
+      if (localLiked) {
+        await onUnlike?.();
+        setLocalLiked(false);
+        setLocalLikesCount(prev => Math.max(0, prev - 1));
+      } else {
+        await onLike?.();
+        setLocalLiked(true);
+        setLocalLikesCount(prev => prev + 1);
+      }
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
   return (
     <div className="scrobble-card">
       {scrobble.albumArtURL ? (
@@ -30,7 +72,14 @@ export function ScrobbleCard({ scrobble, user, timeAgo, showUser = true }: Scrob
       )}
       
       <div className="scrobble-info">
-        <div className="scrobble-track">{scrobble.title}</div>
+        <div className="scrobble-track">
+          {scrobble.title}
+          {scrobble.isLikedOnSpotify && (
+            <Tooltip content={lang === 'ru' ? 'Лайк в Spotify' : 'Liked on Spotify'}>
+              <span className="spotify-like-badge" title="Liked on Spotify">💚</span>
+            </Tooltip>
+          )}
+        </div>
         <div className="scrobble-artist">{scrobble.artist}</div>
         
         {showUser && user && (
@@ -42,6 +91,31 @@ export function ScrobbleCard({ scrobble, user, timeAgo, showUser = true }: Scrob
             />
             {user.name}
           </Link>
+        )}
+      </div>
+      
+      <div className="scrobble-actions">
+        {canLike && (onLike || onUnlike) && (
+          <button 
+            className={`like-button ${localLiked ? 'liked' : ''} ${isLiking ? 'loading' : ''}`}
+            onClick={handleLikeClick}
+            disabled={isLiking}
+            title={localLiked 
+              ? (lang === 'ru' ? 'Убрать лайк' : 'Unlike') 
+              : (lang === 'ru' ? 'Нравится' : 'Like')
+            }
+          >
+            <Icon data={localLiked ? HeartFill : Heart} size={16} />
+            {localLikesCount > 0 && (
+              <span className="likes-count">{localLikesCount}</span>
+            )}
+          </button>
+        )}
+        {!canLike && localLikesCount > 0 && (
+          <span className="likes-count-static">
+            <Icon data={HeartFill} size={14} />
+            {localLikesCount}
+          </span>
         )}
       </div>
       
