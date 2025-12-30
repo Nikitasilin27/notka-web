@@ -11,11 +11,8 @@ service cloud.firestore {
     match /scrobbles/{scrobbleId} {
       allow read: if true;
       allow create: if request.auth != null;
-      // Allow update by owner OR by Cloud Functions (for likesCount)
       allow update: if request.auth != null;
-      allow delete: if request.auth != null && 
-        (resource.data.odl == request.auth.token.sub || 
-         resource.data.userId == request.auth.token.sub);
+      allow delete: if request.auth != null;
     }
     
     // Followers collection
@@ -39,29 +36,13 @@ service cloud.firestore {
     // Likes collection
     match /likes/{likeId} {
       allow read: if true;
-      // Only authenticated users can like
-      allow create: if request.auth != null;
-      // Only the liker can remove their like
-      allow delete: if request.auth != null && 
-        resource.data.odl == request.auth.token.sub;
-      // No updates allowed (delete and recreate instead)
-      allow update: if false;
+      allow write: if request.auth != null;
     }
     
     // Notifications collection
     match /notifications/{notificationId} {
-      // Users can only read their own notifications
-      allow read: if request.auth != null && 
-        resource.data.odl == request.auth.token.sub;
-      // Only Cloud Functions create notifications
-      allow create: if false;
-      // Users can mark their notifications as read
-      allow update: if request.auth != null && 
-        resource.data.odl == request.auth.token.sub &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      // Users can delete their own notifications
-      allow delete: if request.auth != null && 
-        resource.data.odl == request.auth.token.sub;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
   }
 }
