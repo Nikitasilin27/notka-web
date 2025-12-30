@@ -32,6 +32,9 @@ export interface Scrobble {
   timestamp: Date;
   scrobbledAt?: Date;    // iOS использует scrobbledAt
   duration?: number;
+  // Like fields
+  isLikedOnSpotify?: boolean;  // Was this track liked on Spotify when scrobbled
+  likesCount?: number;         // Social likes count (updated by Cloud Function)
 }
 
 export interface SpotifyTokens {

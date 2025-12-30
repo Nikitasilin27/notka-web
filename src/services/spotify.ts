@@ -9,7 +9,8 @@ const SCOPES = [
   'user-read-recently-played',
   'user-read-playback-state',
   'user-read-private',
-  'user-read-email'
+  'user-read-email',
+  'user-library-read'  // For checking liked tracks
 ].join(' ');
 
 // PKCE helpers
@@ -332,4 +333,50 @@ export async function getArtistsByIds(artistIds: string[]): Promise<Map<string, 
   }
   
   return results;
+}
+
+// ============================================
+// SPOTIFY LIKED TRACKS
+// ============================================
+
+/**
+ * Check if tracks are in user's Spotify library (liked)
+ * @param trackIds Array of Spotify track IDs
+ * @returns Map of trackId -> isLiked
+ */
+export async function checkTracksLiked(trackIds: string[]): Promise<Map<string, boolean>> {
+  const results = new Map<string, boolean>();
+  const token = await getValidAccessToken();
+  if (!token) return results;
+  
+  // Spotify allows up to 50 IDs per request
+  const batchSize = 50;
+  for (let i = 0; i < trackIds.length; i += batchSize) {
+    const batch = trackIds.slice(i, i + batchSize);
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/tracks/contains?ids=${batch.join(',')}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.ok) {
+        const data: boolean[] = await response.json();
+        batch.forEach((id, index) => {
+          results.set(id, data[index] || false);
+        });
+      }
+    } catch (error) {
+      console.error('Error checking liked tracks:', error);
+    }
+  }
+  
+  return results;
+}
+
+/**
+ * Check if a single track is liked
+ */
+export async function isTrackLiked(trackId: string): Promise<boolean> {
+  const result = await checkTracksLiked([trackId]);
+  return result.get(trackId) || false;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentlyPlaying } from '../services/spotify';
+import { getCurrentlyPlaying, isTrackLiked } from '../services/spotify';
 import { updateCurrentTrack, addScrobble, getLastUserScrobble } from '../services/firebase';
 import { SpotifyCurrentlyPlaying, Scrobble, SpotifyTrack } from '../types';
 import { useAuth } from './useAuth';
@@ -123,6 +123,14 @@ export function useScrobbler(): UseScrobblerReturn {
     setIsScrobbling(true);
     
     try {
+      // Check if track is liked on Spotify
+      let isLikedOnSpotify = false;
+      try {
+        isLikedOnSpotify = await isTrackLiked(session.trackId);
+      } catch (e) {
+        console.log('Could not check Spotify like status:', e);
+      }
+      
       const scrobble: Omit<Scrobble, 'id'> = {
         odl: spotifyId,
         trackId: session.trackId,
@@ -133,6 +141,8 @@ export function useScrobbler(): UseScrobblerReturn {
         albumArtURL: session.track.album.images[0]?.url,
         timestamp: new Date(session.startTime),
         duration: session.track.duration_ms,
+        isLikedOnSpotify,
+        likesCount: 0,
       };
 
       const id = await addScrobble(scrobble);
@@ -143,7 +153,8 @@ export function useScrobbler(): UseScrobblerReturn {
         setLastScrobble({ ...scrobble, id });
         
         const dur = Math.round(session.track.duration_ms / 1000);
-        console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})`);
+        const likeIcon = isLikedOnSpotify ? ' 💚' : '';
+        console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`);
         return true;
       }
     } catch (err) {

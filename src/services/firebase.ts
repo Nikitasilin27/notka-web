@@ -11,7 +11,9 @@ import {
   getDocs,
   where,
   Timestamp,
-  addDoc
+  addDoc,
+  writeBatch,
+  onSnapshot
 } from 'firebase/firestore';
 import { signInWithCustomToken, signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
@@ -238,6 +240,9 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
     trackId: scrobble.trackId,
     artistId: scrobble.artistId, // Spotify Artist ID for accurate image fetching
     albumArtURL: scrobble.albumArtURL,
+    // Like fields
+    isLikedOnSpotify: scrobble.isLikedOnSpotify || false,
+    likesCount: 0,
   });
   
   console.log('✓ Scrobbled:', scrobble.title);
@@ -370,4 +375,234 @@ export async function signOutFromFirebase(): Promise<void> {
 
 export function getCurrentFirebaseUser() {
   return auth.currentUser;
+}
+
+// ============================================
+// LIKES
+// ============================================
+
+export interface Like {
+  id: string;
+  odl: string;
+  odlName: string;
+  odlAvatar?: string;
+  scrobbleId: string;
+  trackId: string;
+  trackName: string;
+  artistName: string;
+  ownerOdl: string;
+  timestamp: Date;
+}
+
+/**
+ * Like a scrobble
+ */
+export async function likeScrobble(
+  scrobble: Scrobble,
+  liker: { odl: string; name: string; avatar?: string }
+): Promise<string> {
+  const likeId = `${liker.odl}_${scrobble.id}`;
+  const likeRef = doc(db, 'likes', likeId);
+  
+  await setDoc(likeRef, {
+    odl: liker.odl,
+    odlName: liker.name,
+    odlAvatar: liker.avatar || null,
+    scrobbleId: scrobble.id,
+    trackId: scrobble.trackId || '',
+    trackName: scrobble.title,
+    artistName: scrobble.artist,
+    ownerOdl: scrobble.odl,
+    timestamp: Timestamp.now(),
+  });
+  
+  return likeId;
+}
+
+/**
+ * Unlike a scrobble
+ */
+export async function unlikeScrobble(odl: string, scrobbleId: string): Promise<void> {
+  const likeId = `${odl}_${scrobbleId}`;
+  const likeRef = doc(db, 'likes', likeId);
+  await deleteDoc(likeRef);
+}
+
+/**
+ * Check if user has liked a scrobble
+ */
+export async function hasLikedScrobble(odl: string, scrobbleId: string): Promise<boolean> {
+  const likeId = `${odl}_${scrobbleId}`;
+  const likeRef = doc(db, 'likes', likeId);
+  const likeDoc = await getDoc(likeRef);
+  return likeDoc.exists();
+}
+
+/**
+ * Check multiple likes at once (for feed)
+ */
+export async function checkLikedScrobbles(odl: string, scrobbleIds: string[]): Promise<Set<string>> {
+  const likedIds = new Set<string>();
+  
+  // Check in batches of 10 (Firestore limit for 'in' queries doesn't apply here, but batch for performance)
+  const batchSize = 10;
+  for (let i = 0; i < scrobbleIds.length; i += batchSize) {
+    const batch = scrobbleIds.slice(i, i + batchSize);
+    const promises = batch.map(async (scrobbleId) => {
+      const isLiked = await hasLikedScrobble(odl, scrobbleId);
+      if (isLiked) likedIds.add(scrobbleId);
+    });
+    await Promise.all(promises);
+  }
+  
+  return likedIds;
+}
+
+/**
+ * Get likes for a scrobble
+ */
+export async function getScrobbleLikes(scrobbleId: string): Promise<Like[]> {
+  const likesRef = collection(db, 'likes');
+  const q = query(
+    likesRef,
+    where('scrobbleId', '==', scrobbleId),
+    orderBy('timestamp', 'desc')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    timestamp: doc.data().timestamp?.toDate() || new Date()
+  })) as Like[];
+}
+
+/**
+ * Get user's liked scrobbles
+ */
+export async function getUserLikes(odl: string, limitCount = 50): Promise<Like[]> {
+  const likesRef = collection(db, 'likes');
+  const q = query(
+    likesRef,
+    where('odl', '==', odl),
+    orderBy('timestamp', 'desc'),
+    limit(limitCount)
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    timestamp: doc.data().timestamp?.toDate() || new Date()
+  })) as Like[];
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+export interface Notification {
+  id: string;
+  odl: string;
+  type: 'like' | 'follow' | 'suggestion';
+  fromOdl: string;
+  fromName: string;
+  fromAvatar?: string;
+  data: {
+    scrobbleId?: string;
+    trackName?: string;
+    artistName?: string;
+    suggestionId?: string;
+  };
+  read: boolean;
+  timestamp: Date;
+}
+
+/**
+ * Get user's notifications
+ */
+export async function getUserNotifications(odl: string, limitCount = 50): Promise<Notification[]> {
+  const notificationsRef = collection(db, 'notifications');
+  const q = query(
+    notificationsRef,
+    where('odl', '==', odl),
+    orderBy('timestamp', 'desc'),
+    limit(limitCount)
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    timestamp: doc.data().timestamp?.toDate() || new Date()
+  })) as Notification[];
+}
+
+/**
+ * Get unread notification count
+ */
+export async function getUnreadNotificationCount(odl: string): Promise<number> {
+  const notificationsRef = collection(db, 'notifications');
+  const q = query(
+    notificationsRef,
+    where('odl', '==', odl),
+    where('read', '==', false)
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.size;
+}
+
+/**
+ * Mark notification as read
+ */
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  const notificationRef = doc(db, 'notifications', notificationId);
+  await updateDoc(notificationRef, { read: true });
+}
+
+/**
+ * Mark all notifications as read
+ */
+export async function markAllNotificationsRead(odl: string): Promise<void> {
+  const notificationsRef = collection(db, 'notifications');
+  const q = query(
+    notificationsRef,
+    where('odl', '==', odl),
+    where('read', '==', false)
+  );
+  
+  const snapshot = await getDocs(q);
+  const batch = writeBatch(db);
+  
+  snapshot.docs.forEach(doc => {
+    batch.update(doc.ref, { read: true });
+  });
+  
+  await batch.commit();
+}
+
+/**
+ * Subscribe to notifications (real-time)
+ */
+export function subscribeToNotifications(
+  odl: string,
+  callback: (notifications: Notification[]) => void
+): () => void {
+  const notificationsRef = collection(db, 'notifications');
+  const q = query(
+    notificationsRef,
+    where('odl', '==', odl),
+    orderBy('timestamp', 'desc'),
+    limit(50)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const notifications = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      timestamp: doc.data().timestamp?.toDate() || new Date()
+    })) as Notification[];
+    callback(notifications);
+  });
 }
