@@ -393,6 +393,7 @@ export interface Like {
   trackId: string;
   trackName: string;
   artistName: string;
+  albumArtURL?: string;
   ownerOdl: string;
   timestamp: Date;
 }
@@ -415,6 +416,7 @@ export async function likeScrobble(
     trackId: scrobble.trackId || '',
     trackName: scrobble.title,
     artistName: scrobble.artist,
+    albumArtURL: scrobble.albumArtURL || null,
     ownerOdl: scrobble.odl,
     timestamp: Timestamp.now(),
   });

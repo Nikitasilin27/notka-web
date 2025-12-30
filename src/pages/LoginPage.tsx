@@ -1,4 +1,5 @@
-import { Button, Text, Icon } from '@gravity-ui/uikit';
+import { Button, Text, Icon, DropdownMenu } from '@gravity-ui/uikit';
+import { ChevronDown } from '@gravity-ui/icons';
 import { initiateSpotifyLogin } from '../services/spotify';
 import { useI18n } from '../hooks/useI18n';
 
@@ -22,22 +23,77 @@ const YandexMusicIcon = () => (
   </svg>
 );
 
+// Music illustration SVG component
+const MusicIllustration = () => (
+  <svg 
+    id="freepik_stories-music" 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 500 500"
+    width="200"
+    height="200"
+  >
+    <g id="freepik--musical-notes--inject-2">
+      <path d="M219.23,374.25a45.79,45.79,0,1,1-30.65-57.06A45.79,45.79,0,0,1,219.23,374.25Z" fill="#455a64"/>
+      <rect x="218.33" y="143.37" width="34.98" height="230.23" transform="translate(-54.5 98.53) rotate(-16.76)" fill="#455a64"/>
+      <path d="M380.38,353.2a45.8,45.8,0,1,1-30.65-57.06A45.79,45.79,0,0,1,380.38,353.2Z" fill="#455a64"/>
+      <rect x="379.48" y="122.32" width="34.98" height="230.23" transform="translate(-32.67 153.69) rotate(-16.75)" fill="#455a64"/>
+      <polygon points="446.8 132.7 243.38 172.69 252.25 143.21 455.67 103.23 446.8 132.7" fill="#455a64"/>
+      <polygon points="430.07 188.25 226.66 228.24 235.53 198.77 438.94 158.78 430.07 188.25" fill="#455a64"/>
+      <path d="M55.91,194.71A6.07,6.07,0,1,1,53,186.65,6.08,6.08,0,0,1,55.91,194.71Z" fill="#455a64"/>
+      <rect x="57.95" y="164.58" width="4.64" height="30.52" transform="translate(-68.52 44.73) rotate(-24.93)" fill="#455a64"/>
+      <path d="M77.44,195a6.07,6.07,0,1,1-2.94-8.06A6.07,6.07,0,0,1,77.44,195Z" fill="#455a64"/>
+      <rect x="79.49" y="164.86" width="4.64" height="30.52" transform="translate(-64.52 54.69) rotate(-24.94)" fill="#455a64"/>
+      <polygon points="90.32 167.31 62.88 168.72 64.6 165.03 92.04 163.62 90.32 167.31" fill="#455a64"/>
+    </g>
+    <g id="freepik--speech-bubble--inject-2">
+      <path d="M454.11,77.83a22.07,22.07,0,0,1-36.89,14l-11.05,1.63,5.53-9.55a22.08,22.08,0,1,1,42.41-6Z" fill="#fff"/>
+      <path d="M454.11,77.83A22.32,22.32,0,0,1,449.65,89a19.68,19.68,0,0,1-4.33,4.28,22.48,22.48,0,0,1-11.27,4.38,21,21,0,0,1-3.07.06,18.58,18.58,0,0,1-3.06-.32A22.27,22.27,0,0,1,417,92l.26.08-11,1.69-.8.13.4-.71,5.5-9.57,0,.38a22.33,22.33,0,0,1,1.36-19.68A22.55,22.55,0,0,1,419.58,57,22.16,22.16,0,0,1,429,53.45a22,22,0,0,1,18.5,6.15A22.23,22.23,0,0,1,454.11,77.83Z" fill="#263238"/>
+      <path d="M441.51,79.7a28.86,28.86,0,0,1-9.28,8,28.89,28.89,0,0,1-9.27-8c-3.26-4.33-3.1-11.09,1.57-12.55,5.16-1.62,7.7,6.15,7.7,6.15s2.58-7.82,7.71-6.15C444.59,68.66,444.77,75.37,441.51,79.7Z" fill="#FF7700"/>
+    </g>
+  </svg>
+);
+
 export function LoginPage() {
-  const { lang } = useI18n();
+  const { lang, setLang, t } = useI18n();
   
   const handleSpotifyLogin = () => {
     initiateSpotifyLogin();
   };
 
+  const languageItems = [
+    { 
+      action: () => setLang('ru'), 
+      text: t.russian,
+      selected: lang === 'ru'
+    },
+    { 
+      action: () => setLang('en'), 
+      text: t.english,
+      selected: lang === 'en'
+    },
+  ];
+
   return (
     <div className="login-page">
-      <div className="login-logo">🎵</div>
+      {/* Language selector in top right */}
+      <div className="login-lang-selector">
+        <DropdownMenu
+          items={languageItems}
+          switcher={
+            <Button view="outlined" size="m">
+              {lang === 'ru' ? '🇷🇺 RU' : '🇬🇧 EN'}
+              <Icon data={ChevronDown} size={16} />
+            </Button>
+          }
+        />
+      </div>
+      
+      <div className="login-logo">
+        <MusicIllustration />
+      </div>
       <h1 className="login-title">Notka</h1>
       <p className="login-subtitle">
-        {lang === 'ru' 
-          ? 'Находи единомышленников по музыкальным вкусам, делись скробблами и открывай новую музыку вместе'
-          : 'Find like-minded music lovers, share scrobbles, and discover new music together'
-        }
+        {t.loginSubtitle}
       </p>
       
       <div className="login-buttons">
@@ -49,7 +105,7 @@ export function LoginPage() {
           className="login-btn"
         >
           <Icon data={SpotifyIcon} size={18} />
-          {lang === 'ru' ? 'Войти со Spotify' : 'Sign in with Spotify'}
+          {t.signInSpotify}
         </Button>
         
         <Button
@@ -61,6 +117,7 @@ export function LoginPage() {
         >
           <Icon data={AppleMusicIcon} size={18} />
           Apple Music
+          <span className="login-coming-soon">{t.comingSoon}</span>
         </Button>
         
         <Button
@@ -72,14 +129,12 @@ export function LoginPage() {
         >
           <Icon data={YandexMusicIcon} size={18} />
           {lang === 'ru' ? 'Яндекс Музыка' : 'Yandex Music'}
+          <span className="login-coming-soon">{t.comingSoon}</span>
         </Button>
       </div>
       
       <Text variant="body-1" color="secondary" className="login-hint">
-        {lang === 'ru' 
-          ? 'Apple Music и Яндекс Музыка в разработке. Вход через Spotify недоступен из России без VPN.'
-          : 'Apple Music and Yandex Music are coming soon. Spotify login is not available from Russia without VPN.'
-        }
+        {t.loginHint}
       </Text>
     </div>
   );

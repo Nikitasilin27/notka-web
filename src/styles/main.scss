@@ -66,6 +66,70 @@ body {
   min-height: 100dvh;
 }
 
+// Mobile Header
+.mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4); // 12px 16px
+  background: var(--g-color-base-float);
+  border-bottom: 1px solid var(--g-color-line-generic);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mobile-header-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--g-color-text-primary);
+}
+
+// Notifications
+.notifications-button {
+  position: relative;
+}
+
+.notifications-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ff4d6a;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-badge-footer {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ff4d6a;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--spacing-2);
+}
+
+.notification-unread {
+  font-weight: 600;
+}
+
+.notification-read {
+  opacity: 0.7;
+}
+
 .main-content-mobile {
   flex: 1;
   padding: var(--spacing-4); // 16px
@@ -134,6 +198,7 @@ body {
 
 // Login page
 .login-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -142,11 +207,33 @@ body {
   min-height: 100dvh;
   padding: var(--spacing-6); // 24px
   text-align: center;
-  gap: var(--spacing-6); // 24px
+  gap: var(--spacing-4); // 16px
+}
+
+.login-lang-selector {
+  position: absolute;
+  top: var(--spacing-4);
+  right: var(--spacing-4);
 }
 
 .login-logo {
-  font-size: 64px;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-logo {
+    width: 140px;
+    height: 140px;
+  }
 }
 
 .login-title {
@@ -156,6 +243,7 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  margin: 0;
 }
 
 @media (max-width: 768px) {
@@ -168,6 +256,7 @@ body {
   color: var(--g-color-text-secondary);
   font-size: 18px;
   max-width: 400px;
+  margin: 0;
 }
 
 @media (max-width: 768px) {
@@ -182,10 +271,21 @@ body {
   gap: var(--spacing-3); // 12px
   width: 100%;
   max-width: 320px;
+  margin-top: var(--spacing-4);
 }
 
 .login-btn {
   gap: var(--spacing-2) !important; // 8px between icon and text
+  position: relative;
+}
+
+.login-coming-soon {
+  font-size: 10px;
+  background: var(--g-color-base-warning-light);
+  color: var(--g-color-text-warning);
+  padding: 2px 6px;
+  border-radius: var(--g-border-radius-xs);
+  margin-left: auto;
 }
 
 .login-hint {
@@ -350,11 +450,65 @@ body {
   }
 }
 
+.scrobble-art-container {
+  flex-shrink: 0;
+}
+
 .scrobble-art {
   width: 48px;
   height: 48px;
   border-radius: var(--g-border-radius-xs);
   object-fit: cover;
+  display: block;
+}
+
+.scrobble-art-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--g-color-base-generic);
+  color: var(--g-color-text-hint);
+}
+
+// Like button between image and info (like Last.fm)
+.scrobble-like-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--g-color-text-hint);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 50%;
+  flex-shrink: 0;
+  
+  &:hover:not(:disabled) {
+    color: var(--g-color-text-secondary);
+  }
+  
+  &.liked {
+    color: #ff4d6a;
+  }
+  
+  &.loading {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.scrobble-likes-static {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  color: #ff4d6a;
   flex-shrink: 0;
 }
 
@@ -363,20 +517,37 @@ body {
   min-width: 0;
 }
 
+.scrobble-track-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2); // 8px
+  flex-wrap: wrap;
+}
+
 .scrobble-track {
   font-weight: 600;
   font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1); // 4px
 }
 
-.spotify-like-badge {
-  font-size: 12px;
-  flex-shrink: 0;
+// Spotify liked label styling
+.spotify-liked-label {
+  .g-label__content {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.spotify-label-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  svg {
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 768px) {
@@ -411,79 +582,47 @@ body {
   &:hover {
     color: var(--g-color-text-primary);
   }
-  
-  img {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-  }
+}
+
+.scrobble-user-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+// Meta info (likes count + time)
+.scrobble-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-1); // 4px
+  flex-shrink: 0;
+}
+
+.scrobble-likes-count {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: #ff4d6a;
+  font-weight: 500;
 }
 
 .scrobble-time {
   font-size: 12px;
   color: var(--g-color-text-hint);
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
+// Legacy styles (hide old)
 .scrobble-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2); // 8px
-  flex-shrink: 0;
+  display: none;
 }
 
-.like-button {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1); // 4px
-  padding: var(--spacing-1) var(--spacing-2); // 4px 8px
-  background: transparent;
-  border: 1px solid var(--g-color-line-generic);
-  border-radius: var(--g-border-radius-s);
-  color: var(--g-color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 13px;
-  
-  &:hover:not(:disabled) {
-    background: var(--g-color-base-simple-hover);
-    border-color: var(--g-color-line-generic-hover);
-    color: var(--g-color-text-primary);
-  }
-  
-  &.liked {
-    color: #ff4d6a;
-    border-color: rgba(255, 77, 106, 0.3);
-    
-    &:hover:not(:disabled) {
-      background: rgba(255, 77, 106, 0.1);
-    }
-  }
-  
-  &.loading {
-    opacity: 0.6;
-    cursor: wait;
-  }
-  
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-}
-
-.likes-count {
-  font-weight: 500;
-  font-size: 12px;
-}
-
+.like-button,
+.likes-count,
 .likes-count-static {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1); // 4px
-  color: #ff4d6a;
-  font-size: 12px;
-  font-weight: 500;
+  display: none;
 }
 
 // Listeners list (iOS style cards)
@@ -916,6 +1055,11 @@ body {
   flex-shrink: 0;
 }
 
+// Add padding for search icon in text input
+.track-search-input .g-text-input__additional-content_placement_start {
+  margin-left: var(--spacing-2); // 8px
+}
+
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
@@ -1042,6 +1186,19 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.artist-dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.artist-dialog-footer-right {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-left: auto;
 }
 
 // Music Match Widget

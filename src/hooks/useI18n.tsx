@@ -37,8 +37,13 @@ interface Translations {
   darkTheme: string;
   language: string;
   recentTracks: string;
+  likedTracks: string;
   userNotFound: string;
   turnOnSpotify: string;
+  topArtists: string;
+  topAlbums: string;
+  noLikedTracks: string;
+  searchTracks: string;
   
   // Time
   justNow: string;
@@ -49,6 +54,12 @@ interface Translations {
   // Languages
   russian: string;
   english: string;
+  
+  // Login page
+  loginSubtitle: string;
+  signInSpotify: string;
+  comingSoon: string;
+  loginHint: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -86,9 +97,14 @@ const translations: Record<Language, Translations> = {
     settings: 'Настройки',
     darkTheme: 'Тёмная тема',
     language: 'Язык',
-    recentTracks: 'Последние треки',
+    recentTracks: 'Недавние треки',
+    likedTracks: 'Понравившиеся',
     userNotFound: 'Пользователь не найден',
     turnOnSpotify: 'Включи музыку в Spotify!',
+    topArtists: 'Топ исполнителей',
+    topAlbums: 'Топ альбомов',
+    noLikedTracks: 'Нет понравившихся треков',
+    searchTracks: 'Поиск треков...',
     
     // Time
     justNow: 'только что',
@@ -99,6 +115,12 @@ const translations: Record<Language, Translations> = {
     // Languages
     russian: 'Русский',
     english: 'English',
+    
+    // Login page
+    loginSubtitle: 'Находи единомышленников по музыкальным вкусам, делись скробблами и открывай новую музыку вместе',
+    signInSpotify: 'Войти со Spotify',
+    comingSoon: 'Скоро',
+    loginHint: 'Apple Music и Яндекс Музыка в разработке. Вход через Spotify недоступен из России без VPN.',
   },
   en: {
     // Navigation
@@ -135,8 +157,13 @@ const translations: Record<Language, Translations> = {
     darkTheme: 'Dark theme',
     language: 'Language',
     recentTracks: 'Recent tracks',
+    likedTracks: 'Liked tracks',
     userNotFound: 'User not found',
     turnOnSpotify: 'Turn on music in Spotify!',
+    topArtists: 'Top Artists',
+    topAlbums: 'Top Albums',
+    noLikedTracks: 'No liked tracks yet',
+    searchTracks: 'Search tracks...',
     
     // Time
     justNow: 'just now',
@@ -147,6 +174,12 @@ const translations: Record<Language, Translations> = {
     // Languages
     russian: 'Русский',
     english: 'English',
+    
+    // Login page
+    loginSubtitle: 'Find like-minded music lovers, share scrobbles, and discover new music together',
+    signInSpotify: 'Sign in with Spotify',
+    comingSoon: 'Coming soon',
+    loginHint: 'Apple Music and Yandex Music are coming soon. Spotify login is not available from Russia without VPN.',
   }
 };
 

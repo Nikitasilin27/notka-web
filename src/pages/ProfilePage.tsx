@@ -1,21 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput } from '@gravity-ui/uikit';
+import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { PersonPlus, PersonXmark, Magnifier } from '@gravity-ui/icons';
+import { PersonPlus, PersonXmark, Magnifier, ChevronLeft } from '@gravity-ui/icons';
 import { 
   getUser, 
   getUserScrobbles, 
   isFollowing, 
   followUser, 
   unfollowUser,
-  getFollowCounts 
+  getFollowCounts,
+  getUserLikes
 } from '../services/firebase';
 import { getArtistsByIds, getArtistImages } from '../services/spotify';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
+import { useScrobbler } from '../hooks/useScrobbler';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 
 interface TopArtist {
@@ -55,6 +57,7 @@ export function ProfilePage() {
   const { odl } = useParams<{ odl: string }>();
   const { spotifyId, avatarUrl } = useAuth();
   const { t, lang } = useI18n();
+  const { currentlyPlaying } = useScrobbler();
   
   const [user, setUser] = useState<User | null>(null);
   const [allScrobbles, setAllScrobbles] = useState<Scrobble[]>([]);
@@ -76,23 +79,32 @@ export function ProfilePage() {
   const [artistInfo, setArtistInfo] = useState<WikipediaArtistInfo | null>(null);
   const [artistTracks, setArtistTracks] = useState<Scrobble[]>([]);
   const [isArtistInfoLoading, setIsArtistInfoLoading] = useState(false);
+  const [openedFromMatchDialog, setOpenedFromMatchDialog] = useState(false);
   
   const [musicMatch, setMusicMatch] = useState<MusicMatch | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
+  
+  // Tracks view mode: recent or liked
+  const [tracksMode, setTracksMode] = useState<'recent' | 'liked'>('recent');
+  const [likedScrobbles, setLikedScrobbles] = useState<Scrobble[]>([]);
+  const [isLikedLoading, setIsLikedLoading] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
+  
+  // Get current scrobbles based on mode
+  const currentScrobbles = tracksMode === 'recent' ? allScrobbles : likedScrobbles;
 
   // Filter scrobbles based on search
   const filteredScrobbles = useMemo(() => {
-    if (!searchQuery.trim()) return allScrobbles;
+    if (!searchQuery.trim()) return currentScrobbles;
     const query = searchQuery.toLowerCase();
-    return allScrobbles.filter(s => 
+    return currentScrobbles.filter(s => 
       s.title.toLowerCase().includes(query) ||
       s.artist.toLowerCase().includes(query) ||
       s.album?.toLowerCase().includes(query)
     );
-  }, [allScrobbles, searchQuery]);
+  }, [currentScrobbles, searchQuery]);
 
   // Paginated scrobbles
   const paginatedScrobbles = useMemo(() => {
@@ -104,6 +116,52 @@ export function ProfilePage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
+  
+  // Reset page when mode changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tracksMode]);
+
+  // Load liked tracks when switching to liked mode
+  useEffect(() => {
+    if (tracksMode === 'liked' && targetOdl && likedScrobbles.length === 0) {
+      loadLikedTracks();
+    }
+  }, [tracksMode, targetOdl]);
+
+  const loadLikedTracks = async () => {
+    if (!targetOdl) return;
+    
+    setIsLikedLoading(true);
+    try {
+      const likes = await getUserLikes(targetOdl, 100);
+      
+      // Create a map of scrobbleId -> albumArtURL from loaded scrobbles
+      const scrobbleArtMap = new Map<string, string>();
+      allScrobbles.forEach(s => {
+        if (s.id && s.albumArtURL) {
+          scrobbleArtMap.set(s.id, s.albumArtURL);
+        }
+      });
+      
+      // Convert likes to scrobble-like objects, enriching with album art
+      const likedAsScrobbles: Scrobble[] = likes.map(like => ({
+        id: like.scrobbleId,
+        odl: like.ownerOdl,
+        title: like.trackName,
+        artist: like.artistName,
+        trackId: like.trackId,
+        // Prefer album art from like, fallback to scrobble
+        albumArtURL: like.albumArtURL || scrobbleArtMap.get(like.scrobbleId),
+        timestamp: like.timestamp,
+      }));
+      setLikedScrobbles(likedAsScrobbles);
+    } catch (error) {
+      console.error('Error loading liked tracks:', error);
+    } finally {
+      setIsLikedLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!targetOdl) return;
@@ -223,22 +281,32 @@ export function ProfilePage() {
         
         setTopArtists(artistsWithImages);
         setTopAlbums(topAlbumsList);
+        
+        // Load music match for other profiles (AFTER artist images are loaded)
+        if (spotifyId && targetOdl && spotifyId !== targetOdl) {
+          const following = await isFollowing(spotifyId, targetOdl);
+          setFollowStatus(following);
+          
+          const myData = await getUserScrobbles(spotifyId, 100);
+          const match = calculateMusicMatch(myData, scrobblesData, artistsWithImages);
+          setMusicMatch(match);
+        }
       } catch {
         setTopArtists(topArtistsList);
         setTopAlbums(topAlbumsList);
+        
+        // Fallback: calculate match with album images
+        if (spotifyId && targetOdl && spotifyId !== targetOdl) {
+          const following = await isFollowing(spotifyId, targetOdl);
+          setFollowStatus(following);
+          
+          const myData = await getUserScrobbles(spotifyId, 100);
+          const match = calculateMusicMatch(myData, scrobblesData, topArtistsList);
+          setMusicMatch(match);
+        }
       }
       
       setIsArtistsLoading(false);
-      
-      // Load music match for other profiles
-      if (spotifyId && targetOdl && spotifyId !== targetOdl) {
-        const following = await isFollowing(spotifyId, targetOdl);
-        setFollowStatus(following);
-        
-        const myData = await getUserScrobbles(spotifyId, 100);
-        const match = calculateMusicMatch(myData, scrobblesData, topArtistsList);
-        setMusicMatch(match);
-      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
@@ -348,6 +416,15 @@ export function ProfilePage() {
     setSelectedArtist(null);
     setArtistInfo(null);
     setArtistTracks([]);
+    setOpenedFromMatchDialog(false);
+  };
+  
+  const handleBackToMatch = () => {
+    setSelectedArtist(null);
+    setArtistInfo(null);
+    setArtistTracks([]);
+    setOpenedFromMatchDialog(false);
+    setIsMatchDialogOpen(true);
   };
 
   const openWikipedia = () => {
@@ -356,11 +433,21 @@ export function ProfilePage() {
     }
   };
 
-  // Current track from user data (real-time listening status)
-  const currentTrack = user?.currentTrack;
-  const isCurrentlyPlaying = currentTrack && 
-    currentTrack.timestamp && 
-    (Date.now() - new Date(currentTrack.timestamp).getTime()) < 10 * 60 * 1000; // Within 10 min
+  // Current track - use real-time scrobbler for own profile, otherwise user data
+  const currentTrack = isOwnProfile && currentlyPlaying?.item
+    ? { 
+        trackId: currentlyPlaying.item.id,
+        trackName: currentlyPlaying.item.name, 
+        artistName: currentlyPlaying.item.artists[0]?.name || 'Unknown',
+        albumArtURL: currentlyPlaying.item.album?.images?.[0]?.url,
+        timestamp: new Date() 
+      }
+    : user?.currentTrack;
+  const isCurrentlyPlaying = isOwnProfile 
+    ? !!(currentlyPlaying?.is_playing && currentlyPlaying?.item)
+    : currentTrack && 
+      currentTrack.timestamp && 
+      (Date.now() - new Date(currentTrack.timestamp).getTime()) < 10 * 60 * 1000; // Within 10 min
 
   const stats = {
     scrobbles: allScrobbles.length,
@@ -467,9 +554,21 @@ export function ProfilePage() {
         <div className="profile-main">
           <div className="section">
             <div className="section-header">
-              <h2 className="section-title">{t.recentTracks}</h2>
+              <SegmentedRadioGroup
+                value={tracksMode}
+                onUpdate={(val) => setTracksMode(val as 'recent' | 'liked')}
+                size="l"
+                width="auto"
+              >
+                <SegmentedRadioGroup.Option value="recent">
+                  {t.recentTracks}
+                </SegmentedRadioGroup.Option>
+                <SegmentedRadioGroup.Option value="liked">
+                  {t.likedTracks}
+                </SegmentedRadioGroup.Option>
+              </SegmentedRadioGroup>
               <TextInput
-                placeholder={lang === 'ru' ? 'Поиск треков...' : 'Search tracks...'}
+                placeholder={t.searchTracks}
                 value={searchQuery}
                 onUpdate={setSearchQuery}
                 size="m"
@@ -482,10 +581,17 @@ export function ProfilePage() {
               />
             </div>
             
-            {allScrobbles.length === 0 ? (
+            {(tracksMode === 'liked' && isLikedLoading) ? (
+              <div className="loading-container">
+                <Loader size="m" />
+              </div>
+            ) : currentScrobbles.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">🎧</div>
-                <p>{isOwnProfile ? t.turnOnSpotify : t.noScrobbles}</p>
+                <div className="empty-state-icon">{tracksMode === 'liked' ? '❤️' : '🎧'}</div>
+                <p>{tracksMode === 'liked' 
+                  ? (lang === 'ru' ? 'Нет понравившихся треков' : 'No liked tracks yet')
+                  : (isOwnProfile ? t.turnOnSpotify : t.noScrobbles)
+                }</p>
               </div>
             ) : filteredScrobbles.length === 0 ? (
               <div className="empty-state">
@@ -649,11 +755,25 @@ export function ProfilePage() {
           )}
         </Dialog.Body>
         <Dialog.Footer
-          onClickButtonCancel={closeArtistDialog}
-          textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
-          onClickButtonApply={artistInfo?.content_urls ? openWikipedia : undefined}
-          textButtonApply={artistInfo?.content_urls ? 'Wikipedia' : undefined}
-          propsButtonApply={{ view: 'flat' }}
+          renderButtons={() => (
+            <div className="artist-dialog-footer">
+              {openedFromMatchDialog && (
+                <Button view="flat" size="m" onClick={handleBackToMatch}>
+                  <Icon data={ChevronLeft} size={16} />
+                </Button>
+              )}
+              <div className="artist-dialog-footer-right">
+                <Button view="flat" size="m" onClick={closeArtistDialog}>
+                  {lang === 'ru' ? 'Закрыть' : 'Close'}
+                </Button>
+                {artistInfo?.content_urls && (
+                  <Button view="flat" size="m" onClick={openWikipedia}>
+                    Wikipedia
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         />
       </Dialog>
 
@@ -669,7 +789,7 @@ export function ProfilePage() {
                 </h4>
                 <div className="top-artists-grid match-dialog-grid">
                   {musicMatch.commonArtists.slice(0, 6).map((artist) => (
-                    <div key={artist.name} className="top-artist-tile" onClick={() => { setIsMatchDialogOpen(false); handleArtistClick(artist); }}>
+                    <div key={artist.name} className="top-artist-tile" onClick={() => { setIsMatchDialogOpen(false); setOpenedFromMatchDialog(true); handleArtistClick(artist); }}>
                       {artist.imageUrl ? (
                         <img src={artist.imageUrl} alt={artist.name} className="top-artist-tile-image" />
                       ) : (
@@ -690,7 +810,7 @@ export function ProfilePage() {
                   </h4>
                   <div className="top-artists-grid match-dialog-grid">
                     {musicMatch.recommendations.map((artist) => (
-                      <div key={artist.name} className="top-artist-tile" onClick={() => { setIsMatchDialogOpen(false); handleArtistClick(artist); }}>
+                      <div key={artist.name} className="top-artist-tile" onClick={() => { setIsMatchDialogOpen(false); setOpenedFromMatchDialog(true); handleArtistClick(artist); }}>
                         {artist.imageUrl ? (
                           <img src={artist.imageUrl} alt={artist.name} className="top-artist-tile-image" />
                         ) : (
