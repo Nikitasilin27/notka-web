@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentlyPlaying } from '../services/spotify';
-import { updateCurrentTrack, addScrobble } from '../services/firebase';
+import { getCurrentlyPlaying, isTrackLiked } from '../services/spotify';
+import { updateCurrentTrack, addScrobble, getLastUserScrobble } from '../services/firebase';
 import { SpotifyCurrentlyPlaying, Scrobble, SpotifyTrack } from '../types';
 import { useAuth } from './useAuth';
 
@@ -28,6 +28,7 @@ const globalState = {
   lastScrobbledTime: 0,
   isScrobbling: false,
   initialized: false,
+  lastScrobbleLoaded: false,
 };
 
 // Reset global state on page load/refresh
@@ -37,6 +38,7 @@ if (typeof window !== 'undefined') {
     if (document.visibilityState === 'visible') {
       globalState.currentSession = null;
       globalState.initialized = false;
+      // Don't reset lastScrobble info - we need it!
     }
   };
   document.removeEventListener('visibilitychange', resetOnVisible);
@@ -58,9 +60,36 @@ export function useScrobbler(): UseScrobblerReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [lastScrobble, setLastScrobble] = useState<Scrobble | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastScrobbleLoaded, setLastScrobbleLoaded] = useState(globalState.lastScrobbleLoaded);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstCheck = useRef(true);
+
+  // Load last scrobble from Firebase on mount (prevents page reload duplicates)
+  useEffect(() => {
+    if (!spotifyId || globalState.lastScrobbleLoaded) {
+      setLastScrobbleLoaded(true);
+      return;
+    }
+    
+    const loadLastScrobble = async () => {
+      try {
+        const lastScrobbleData = await getLastUserScrobble(spotifyId);
+        if (lastScrobbleData && lastScrobbleData.trackId) {
+          globalState.lastScrobbledTrackId = lastScrobbleData.trackId;
+          globalState.lastScrobbledTime = lastScrobbleData.timestamp.getTime();
+          console.log('📚 Loaded last scrobble:', lastScrobbleData.title);
+        }
+      } catch (e) {
+        console.error('Failed to load last scrobble:', e);
+      } finally {
+        globalState.lastScrobbleLoaded = true;
+        setLastScrobbleLoaded(true);
+      }
+    };
+    
+    loadLastScrobble();
+  }, [spotifyId]);
 
   // Calculate when to scrobble
   const getScrobbleThreshold = useCallback((durationMs: number): number => {
@@ -94,15 +123,26 @@ export function useScrobbler(): UseScrobblerReturn {
     setIsScrobbling(true);
     
     try {
+      // Check if track is liked on Spotify
+      let isLikedOnSpotify = false;
+      try {
+        isLikedOnSpotify = await isTrackLiked(session.trackId);
+      } catch (e) {
+        console.log('Could not check Spotify like status:', e);
+      }
+      
       const scrobble: Omit<Scrobble, 'id'> = {
         odl: spotifyId,
         trackId: session.trackId,
+        artistId: session.track.artists[0]?.id, // Primary artist ID for accurate image
         title: session.track.name,
         artist: session.track.artists.map(a => a.name).join(', '),
         album: session.track.album.name,
         albumArtURL: session.track.album.images[0]?.url,
         timestamp: new Date(session.startTime),
         duration: session.track.duration_ms,
+        isLikedOnSpotify,
+        likesCount: 0,
       };
 
       const id = await addScrobble(scrobble);
@@ -113,7 +153,8 @@ export function useScrobbler(): UseScrobblerReturn {
         setLastScrobble({ ...scrobble, id });
         
         const dur = Math.round(session.track.duration_ms / 1000);
-        console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})`);
+        const likeIcon = isLikedOnSpotify ? ' 💚' : '';
+        console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`);
         return true;
       }
     } catch (err) {
@@ -163,7 +204,7 @@ export function useScrobbler(): UseScrobblerReturn {
         return;
       }
 
-      // CASE 2: Track changed
+      // CASE 2: Track changed (or first load)
       if (!globalState.currentSession || track.id !== globalState.currentSession.trackId) {
         // Scrobble previous track if it qualifies
         if (globalState.currentSession && shouldScrobble(globalState.currentSession)) {
@@ -173,13 +214,24 @@ export function useScrobbler(): UseScrobblerReturn {
           }
         }
         
+        // Check if this track was ALREADY scrobbled recently (prevents page reload duplicates)
+        const threshold = getScrobbleThreshold(track.duration_ms);
+        const alreadyPastThreshold = progressMs >= threshold * 0.9; // 90% of threshold
+        
+        let wasAlreadyScrobbled = false;
+        if (alreadyPastThreshold) {
+          // This track is already past scrobble point - check if we already scrobbled it
+          wasAlreadyScrobbled = globalState.lastScrobbledTrackId === track.id &&
+            (Date.now() - globalState.lastScrobbledTime) < 10 * 60 * 1000; // 10 min
+        }
+        
         // Start new session
         globalState.currentSession = {
           trackId: track.id,
           track: track,
           startTime: Date.now() - progressMs,
           maxProgress: progressMs,
-          scrobbled: false,
+          scrobbled: wasAlreadyScrobbled, // Mark as already scrobbled if past threshold on load
         };
         
         await updateCurrentTrack(spotifyId, {
@@ -190,8 +242,9 @@ export function useScrobbler(): UseScrobblerReturn {
         });
         
         const dur = Math.round(track.duration_ms / 1000);
-        const scrobAt = Math.round(getScrobbleThreshold(track.duration_ms) / 1000);
-        console.log(`▶ Now: ${track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}, scrobble@${scrobAt}s)`);
+        const scrobAt = Math.round(threshold / 1000);
+        const status = wasAlreadyScrobbled ? '(already scrobbled)' : '';
+        console.log(`▶ Now: ${track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}, scrobble@${scrobAt}s) ${status}`);
         return;
       }
 
@@ -228,6 +281,11 @@ export function useScrobbler(): UseScrobblerReturn {
       return;
     }
 
+    // Wait for last scrobble to be loaded from Firebase first
+    if (!lastScrobbleLoaded) {
+      return;
+    }
+
     // Reset state on mount
     isFirstCheck.current = true;
     setIsLoading(true);
@@ -247,7 +305,7 @@ export function useScrobbler(): UseScrobblerReturn {
         intervalRef.current = null;
       }
     };
-  }, [isAuthenticated, checkPlayback]);
+  }, [isAuthenticated, checkPlayback, lastScrobbleLoaded]);
 
   return {
     currentlyPlaying,

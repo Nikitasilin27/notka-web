@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AsideHeader, FooterItem } from '@gravity-ui/navigation';
-import { Icon, Button, Popover, Dialog, DropdownMenu } from '@gravity-ui/uikit';
+import { Icon, Button } from '@gravity-ui/uikit';
 import { House, Persons, Person, ArrowRightFromSquare, MusicNote, Gear, Bell, BellDot, Check, Xmark } from '@gravity-ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../hooks/useI18n';
@@ -20,7 +20,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showAllNotifsDialog, setShowAllNotifsDialog] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -46,9 +46,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (!notification.read) {
       await markNotificationRead(notification.id);
     }
-    setShowAllNotifsDialog(false);
+    setNotifPanelOpen(false);
     
-    // Navigate based on notification type
     if (notification.type === 'like' && notification.data.scrobbleId) {
       navigate(`/profile/${notification.fromOdl}`);
     } else if (notification.type === 'follow') {
@@ -69,162 +68,100 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const handleMarkAllRead = async () => {
-    if (spotifyId) {
-      await markAllNotificationsRead(spotifyId);
-    }
-  };
-
-  const formatNotificationText = (notification: Notification): string => {
-    const name = notification.fromName;
-    
-    if (notification.type === 'like') {
-      const track = notification.data.trackName || 'track';
-      const artist = notification.data.artistName || '';
-      const trackInfo = artist ? `${track} — ${artist}` : track;
-      return lang === 'ru' 
-        ? `${name} лайкнул ваш скроббл "${trackInfo}"`
-        : `${name} liked your scrobble "${trackInfo}"`;
-    }
-    
-    if (notification.type === 'follow') {
-      return lang === 'ru'
-        ? `${name} подписался на вас`
-        : `${name} followed you`;
-    }
-    
-    if (notification.type === 'suggestion') {
-      const track = notification.data.trackName || 'track';
-      const artist = notification.data.artistName || '';
-      const trackInfo = artist ? `${track} — ${artist}` : track;
-      return lang === 'ru'
-        ? `${name} рекомендует вам "${trackInfo}"`
-        : `${name} recommended "${trackInfo}" to you`;
-    }
-    
-    return '';
+    if (!spotifyId) return;
+    await markAllNotificationsRead(spotifyId);
   };
 
   const formatTimeAgo = (date: Date): string => {
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    
-    if (diffMins < 1) return lang === 'ru' ? 'только что' : 'just now';
-    if (diffMins < 60) return lang === 'ru' ? `${diffMins} мин назад` : `${diffMins}m ago`;
-    if (diffHours < 24) return lang === 'ru' ? `${diffHours} ч назад` : `${diffHours}h ago`;
-    return lang === 'ru' ? `${diffDays} д назад` : `${diffDays}d ago`;
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return lang === 'ru' ? 'сейчас' : 'now';
+    if (minutes < 60) return lang === 'ru' ? `${minutes} мин` : `${minutes}m`;
+    if (hours < 24) return lang === 'ru' ? `${hours} ч` : `${hours}h`;
+    return lang === 'ru' ? `${days} д` : `${days}d`;
   };
 
-  const renderNotificationItem = (notification: Notification, showActions = true) => (
-    <div 
-      key={notification.id}
-      className={`notification-item ${notification.read ? 'read' : 'unread'}`}
-      onClick={() => handleNotificationClick(notification)}
-    >
-      {notification.fromAvatar ? (
-        <img src={notification.fromAvatar} alt="" className="notification-avatar" />
-      ) : (
-        <div className="notification-avatar notification-avatar-placeholder">
-          {notification.fromName?.charAt(0) || '?'}
-        </div>
-      )}
-      <div className="notification-content">
-        <div className="notification-text">{formatNotificationText(notification)}</div>
-        <div className="notification-time">{formatTimeAgo(notification.timestamp)}</div>
-      </div>
-      {showActions && (
-        <div className="notification-actions">
-          {!notification.read && (
-            <button 
-              className="notification-action-btn" 
-              onClick={(e) => handleMarkRead(e, notification)}
-              title={lang === 'ru' ? 'Прочитано' : 'Mark read'}
-            >
-              <Icon data={Check} size={14} />
-            </button>
-          )}
-          <button 
-            className="notification-action-btn notification-delete" 
-            onClick={(e) => handleDelete(e, notification)}
-            title={lang === 'ru' ? 'Удалить' : 'Delete'}
-          >
-            <Icon data={Xmark} size={14} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  const getNotificationText = (notification: Notification): string => {
+    const name = notification.fromName || notification.fromOdl;
+    switch (notification.type) {
+      case 'like':
+        return lang === 'ru' 
+          ? `${name} понравился трек "${notification.data.trackName}"`
+          : `${name} liked "${notification.data.trackName}"`;
+      case 'follow':
+        return lang === 'ru'
+          ? `${name} подписался на вас`
+          : `${name} started following you`;
+      case 'suggestion':
+        return lang === 'ru'
+          ? `${name} рекомендует "${notification.data.trackName}"`
+          : `${name} recommends "${notification.data.trackName}"`;
+      default:
+        return '';
+    }
+  };
 
-  const renderNotificationsButton = () => {
-    const hasUnread = unreadCount > 0;
-    const displayNotifications = notifications.slice(0, 8);
-
-    const notificationsContent = (
-      <div className="notifications-popup">
-        <div className="notifications-header">
-          <span>{lang === 'ru' ? 'Уведомления' : 'Notifications'}</span>
-          {unreadCount > 0 && (
-            <button className="notifications-mark-all" onClick={handleMarkAllRead}>
-              {lang === 'ru' ? 'Прочитать все' : 'Mark all read'}
-            </button>
-          )}
-        </div>
-        
-        <div className="notifications-list">
-          {displayNotifications.length > 0 ? (
-            displayNotifications.map(n => renderNotificationItem(n))
-          ) : (
-            <div className="notifications-empty">
-              {lang === 'ru' ? 'Нет уведомлений' : 'No notifications'}
-            </div>
-          )}
-        </div>
-        
-        {notifications.length > 8 && (
-          <button 
-            className="notifications-more"
-            onClick={() => setShowAllNotifsDialog(true)}
-          >
-            {lang === 'ru' ? 'Показать все' : 'Show all'} ({notifications.length})
-          </button>
+  // Render notifications panel content
+  const renderNotificationsPanel = () => (
+    <div className="notifications-panel">
+      <div className="notifications-panel-header">
+        <h3>{lang === 'ru' ? 'Уведомления' : 'Notifications'}</h3>
+        {unreadCount > 0 && (
+          <Button view="flat" size="s" onClick={handleMarkAllRead}>
+            {lang === 'ru' ? 'Прочитать все' : 'Mark all read'}
+          </Button>
         )}
       </div>
-    );
-
-    return (
-      <>
-        <Popover
-          content={notificationsContent}
-          placement="bottom-end"
-          hasArrow={false}
-        >
-          <Button
-            view="flat"
-            size="m"
-            className="notifications-button"
-          >
-            <Icon data={hasUnread ? BellDot : Bell} size={18} />
-            {hasUnread && <span className="notifications-badge">{unreadCount}</span>}
-          </Button>
-        </Popover>
-
-        <Dialog
-          open={showAllNotifsDialog}
-          onClose={() => setShowAllNotifsDialog(false)}
-          size="m"
-        >
-          <Dialog.Header caption={lang === 'ru' ? 'Все уведомления' : 'All notifications'} />
-          <Dialog.Body>
-            <div className="notifications-dialog-list">
-              {notifications.map(n => renderNotificationItem(n))}
+      
+      <div className="notifications-panel-list">
+        {notifications.length > 0 ? (
+          notifications.map(n => (
+            <div 
+              key={n.id} 
+              className={`notification-item ${!n.read ? 'unread' : ''}`}
+              onClick={() => handleNotificationClick(n)}
+            >
+              {n.fromAvatar ? (
+                <img src={n.fromAvatar} alt="" className="notification-avatar" />
+              ) : (
+                <div className="notification-avatar notification-avatar-placeholder">
+                  {(n.fromName || n.fromOdl).charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="notification-content">
+                <div className="notification-text">{getNotificationText(n)}</div>
+                <div className="notification-time">{formatTimeAgo(n.timestamp)}</div>
+              </div>
+              {!n.read && (
+                <div className="notification-actions">
+                  <button 
+                    className="notification-action-btn"
+                    onClick={(e) => handleMarkRead(e, n)}
+                  >
+                    <Icon data={Check} size={14} />
+                  </button>
+                  <button 
+                    className="notification-action-btn"
+                    onClick={(e) => handleDelete(e, n)}
+                  >
+                    <Icon data={Xmark} size={14} />
+                  </button>
+                </div>
+              )}
             </div>
-          </Dialog.Body>
-        </Dialog>
-      </>
-    );
-  };
+          ))
+        ) : (
+          <div className="notifications-empty">
+            {lang === 'ru' ? 'Нет уведомлений' : 'No notifications'}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const menuItems = [
     {
@@ -261,14 +198,41 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate('/login');
   };
 
+  // Mobile notification button
+  const renderMobileNotificationsButton = () => {
+    const hasUnread = unreadCount > 0;
+    
+    return (
+      <Button
+        view="flat"
+        size="m"
+        className="notifications-button"
+        onClick={() => setNotifPanelOpen(!notifPanelOpen)}
+      >
+        <Icon data={hasUnread ? BellDot : Bell} size={18} />
+        {hasUnread && <span className="notifications-badge">{unreadCount}</span>}
+      </Button>
+    );
+  };
+
   // Mobile: Bottom Tab Bar
   if (isMobile) {
     return (
       <div className="app-mobile">
         <header className="mobile-header">
           <span className="mobile-header-title">Notka</span>
-          {renderNotificationsButton()}
+          {renderMobileNotificationsButton()}
         </header>
+        
+        {/* Mobile notifications panel */}
+        {notifPanelOpen && (
+          <div className="mobile-notifications-overlay" onClick={() => setNotifPanelOpen(false)}>
+            <div className="mobile-notifications-panel" onClick={e => e.stopPropagation()}>
+              {renderNotificationsPanel()}
+            </div>
+          </div>
+        )}
+        
         <main className="main-content-mobile">{children}</main>
         <nav className="mobile-tab-bar">
           {menuItems.map((item) => (
@@ -297,70 +261,70 @@ export function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  // Desktop: Aside Header
+  // Desktop: AsideHeader with custom notification panel
   return (
-    <AsideHeader
-      logo={{
-        text: 'Notka',
-        icon: MusicNote,
-        iconSize: 24,
-        onClick: () => navigate('/'),
-      }}
-      compact={compact}
-      onChangeCompact={setCompact}
-      headerDecoration={true}
-      menuItems={menuItems}
-      renderFooter={({ compact: isCompact }) => (
+    <>
+      <AsideHeader
+        logo={{
+          text: 'Notka',
+          icon: MusicNote,
+          iconSize: 24,
+          onClick: () => navigate('/'),
+        }}
+        compact={compact}
+        onChangeCompact={setCompact}
+        headerDecoration={true}
+        menuItems={menuItems}
+        renderFooter={({ compact: isCompact }) => (
+          <>
+            <FooterItem
+              id="notifications"
+              title={lang === 'ru' ? 'Уведомления' : 'Notifications'}
+              icon={unreadCount > 0 ? BellDot : Bell}
+              iconSize={18}
+              current={notifPanelOpen}
+              onItemClick={() => setNotifPanelOpen(!notifPanelOpen)}
+              compact={isCompact}
+              enableTooltip={true}
+              rightAdornment={unreadCount > 0 ? (
+                <span className="notifications-badge-menu">{unreadCount}</span>
+              ) : undefined}
+            />
+            <FooterItem
+              id="settings"
+              title={t.settings}
+              icon={Gear}
+              iconSize={18}
+              current={location.pathname === '/settings'}
+              onItemClick={() => navigate('/settings')}
+              compact={isCompact}
+              enableTooltip={true}
+            />
+            <FooterItem
+              id="logout"
+              title={t.logout}
+              icon={ArrowRightFromSquare}
+              iconSize={18}
+              onItemClick={handleLogout}
+              compact={isCompact}
+              enableTooltip={true}
+            />
+          </>
+        )}
+        renderContent={() => (
+          <main className="main-content">{children}</main>
+        )}
+      />
+      
+      {/* Custom desktop notification panel - positioned next to sidebar */}
+      {notifPanelOpen && (
         <>
-          <DropdownMenu
-            items={notifications.length > 0 
-              ? notifications.slice(0, 10).map(notification => ({
-                  action: () => handleNotificationClick(notification),
-                  text: formatNotificationText(notification),
-                }))
-              : [{
-                  action: () => {},
-                  text: lang === 'ru' ? 'Нет уведомлений' : 'No notifications',
-                  disabled: true,
-                }]
-            }
-            popupProps={{ placement: 'right-start' }}
-            renderSwitcher={(props: Record<string, unknown>) => (
-              <FooterItem
-                {...props}
-                id="notifications"
-                title={lang === 'ru' ? 'Уведомления' : 'Notifications'}
-                icon={unreadCount > 0 ? BellDot : Bell}
-                iconSize={18}
-                compact={isCompact}
-                rightAdornment={unreadCount > 0 ? (
-                  <span className="notifications-badge-footer">{unreadCount}</span>
-                ) : undefined}
-              />
-            )}
-          />
-          <FooterItem
-            id="settings"
-            title={t.settings}
-            icon={Gear}
-            iconSize={18}
-            current={location.pathname === '/settings'}
-            onItemClick={() => navigate('/settings')}
-            compact={isCompact}
-          />
-          <FooterItem
-            id="logout"
-            title={t.logout}
-            icon={ArrowRightFromSquare}
-            iconSize={18}
-            onItemClick={handleLogout}
-            compact={isCompact}
-          />
+          <div className="desktop-notif-overlay" onClick={() => setNotifPanelOpen(false)} />
+          <div className="desktop-notif-panel">
+            {renderNotificationsPanel()}
+          </div>
         </>
       )}
-      renderContent={() => (
-        <main className="main-content-desktop">{children}</main>
-      )}
-    />
+    </>
   );
 }

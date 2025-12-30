@@ -49,6 +49,18 @@ body {
   color: var(--g-color-text-primary);
 }
 
+// Main content area (inside AsideHeader renderContent)
+.main-content {
+  padding: var(--spacing-6) var(--spacing-8); // 24px 32px
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1; // Lower than panel z-index
+}
+
 // Desktop layout with sidebar
 .main-content-desktop {
   padding: var(--spacing-6) var(--spacing-8); // 24px 32px
@@ -130,7 +142,121 @@ body {
   opacity: 0.7;
 }
 
-// Notifications Popup
+// Notifications Panel (sidebar drawer)
+.notifications-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--g-color-base-background);
+}
+
+.notifications-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--g-color-line-generic);
+  
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+}
+
+.notifications-panel-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+// Badge in menu item
+.notifications-badge-menu {
+  background: var(--notka-brand);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+// Mobile notifications overlay
+.mobile-notifications-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mobile-notifications-panel {
+  width: 85%;
+  max-width: 360px;
+  height: 100%;
+  background: var(--g-color-base-background);
+  animation: slideInRight 0.2s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+// Notifications panel content
+.notifications-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--g-color-base-background);
+  padding: 0;
+}
+
+// Desktop notification panel - positioned next to sidebar
+.desktop-notif-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 200;
+}
+
+.desktop-notif-panel {
+  position: fixed;
+  top: 0;
+  left: 56px; // Width of collapsed sidebar
+  bottom: 0;
+  width: 320px;
+  background: var(--g-color-base-float);
+  border-right: 1px solid var(--g-color-line-generic);
+  z-index: 201;
+  animation: slideInLeft 0.2s ease;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+// Legacy popup (keeping for compatibility)
 .notifications-popup {
   width: 320px;
   max-height: 400px;
@@ -1108,13 +1234,13 @@ body {
 // Profile content - Two column layout like Last.fm
 .profile-content {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(400px, 1fr) 520px;
   gap: var(--spacing-6); // 24px
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1600px) {
   .profile-content {
-    grid-template-columns: 1fr 480px;
+    grid-template-columns: minmax(400px, 1fr) 600px;
   }
 }
 
@@ -1159,6 +1285,12 @@ body {
 
 .top-artists-grid {
   display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-3); // 12px
+}
+
+// In sidebar - also 4 per row with proper sizing
+.profile-sidebar .top-artists-grid {
   grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-3); // 12px
 }
@@ -1288,6 +1420,17 @@ body {
 // Settings page
 .settings-page {
   max-width: 600px;
+  margin: 0 auto;
+  
+  h1 {
+    margin-bottom: var(--spacing-6); // 24px
+  }
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2); // 8px
 }
 
 // Artist dialog styles

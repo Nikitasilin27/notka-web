@@ -232,26 +232,29 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
     return null;
   }
   
-  // Add the scrobble
-  const docRef = await addDoc(scrobblesRef, {
+  // Add the scrobble - filter out undefined values
+  const scrobbleData: Record<string, unknown> = {
     // Core fields (iOS-compatible)
     title: scrobble.title,
     artist: scrobble.artist,
-    album: scrobble.album,
-    duration: scrobble.duration,
     timestamp: Timestamp.fromDate(scrobble.timestamp),
     scrobbledAt: Timestamp.fromDate(scrobble.timestamp),
     // User identifier - write BOTH for iOS/web compatibility
     odl: odl,
     userId: odl,
-    // Web-specific fields
-    trackId: scrobble.trackId,
-    artistId: scrobble.artistId, // Spotify Artist ID for accurate image fetching
-    albumArtURL: scrobble.albumArtURL,
     // Like fields
     isLikedOnSpotify: scrobble.isLikedOnSpotify || false,
     likesCount: 0,
-  });
+  };
+  
+  // Add optional fields only if they have values
+  if (scrobble.album) scrobbleData.album = scrobble.album;
+  if (scrobble.duration) scrobbleData.duration = scrobble.duration;
+  if (scrobble.trackId) scrobbleData.trackId = scrobble.trackId;
+  if (scrobble.artistId) scrobbleData.artistId = scrobble.artistId;
+  if (scrobble.albumArtURL) scrobbleData.albumArtURL = scrobble.albumArtURL;
+  
+  const docRef = await addDoc(scrobblesRef, scrobbleData);
   
   console.log('✓ Scrobbled:', scrobble.title);
   return docRef.id;
