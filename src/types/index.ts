@@ -8,6 +8,9 @@ export interface User {
   longitude?: number;
   lastUpdated?: Date;
   currentTrack?: CurrentTrack;
+  // Cross-like settings
+  crossLikeEnabled?: boolean; // Master toggle for cross-likes
+  crossLikeMode?: 'spotify_to_notka' | 'notka_to_spotify' | 'both' | 'none';
 }
 
 export interface CurrentTrack {

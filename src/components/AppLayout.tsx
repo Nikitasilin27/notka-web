@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AsideHeader, FooterItem } from '@gravity-ui/navigation';
-import { Icon, DropdownMenu, Button } from '@gravity-ui/uikit';
-import { House, Persons, Person, ArrowRightFromSquare, MusicNote, Gear, Bell, BellDot } from '@gravity-ui/icons';
+import { Icon, Button, Popover, Dialog, DropdownMenu } from '@gravity-ui/uikit';
+import { House, Persons, Person, ArrowRightFromSquare, MusicNote, Gear, Bell, BellDot, Check, Xmark } from '@gravity-ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../hooks/useI18n';
-import { subscribeToNotifications, markNotificationRead, Notification } from '../services/firebase';
+import { subscribeToNotifications, markNotificationRead, deleteNotification, markAllNotificationsRead, Notification } from '../services/firebase';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -20,6 +20,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showAllNotifsDialog, setShowAllNotifsDialog] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -45,6 +46,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (!notification.read) {
       await markNotificationRead(notification.id);
     }
+    setShowAllNotifsDialog(false);
     
     // Navigate based on notification type
     if (notification.type === 'like' && notification.data.scrobbleId) {
@@ -53,6 +55,22 @@ export function AppLayout({ children }: AppLayoutProps) {
       navigate(`/profile/${notification.fromOdl}`);
     } else if (notification.type === 'suggestion') {
       navigate(`/profile/${notification.fromOdl}`);
+    }
+  };
+
+  const handleMarkRead = async (e: React.MouseEvent, notification: Notification) => {
+    e.stopPropagation();
+    await markNotificationRead(notification.id);
+  };
+
+  const handleDelete = async (e: React.MouseEvent, notification: Notification) => {
+    e.stopPropagation();
+    await deleteNotification(notification.id);
+  };
+
+  const handleMarkAllRead = async () => {
+    if (spotifyId) {
+      await markAllNotificationsRead(spotifyId);
     }
   };
 
@@ -86,28 +104,103 @@ export function AppLayout({ children }: AppLayoutProps) {
     return '';
   };
 
+  const formatTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMins < 1) return lang === 'ru' ? 'только что' : 'just now';
+    if (diffMins < 60) return lang === 'ru' ? `${diffMins} мин назад` : `${diffMins}m ago`;
+    if (diffHours < 24) return lang === 'ru' ? `${diffHours} ч назад` : `${diffHours}h ago`;
+    return lang === 'ru' ? `${diffDays} д назад` : `${diffDays}d ago`;
+  };
+
+  const renderNotificationItem = (notification: Notification, showActions = true) => (
+    <div 
+      key={notification.id}
+      className={`notification-item ${notification.read ? 'read' : 'unread'}`}
+      onClick={() => handleNotificationClick(notification)}
+    >
+      {notification.fromAvatar ? (
+        <img src={notification.fromAvatar} alt="" className="notification-avatar" />
+      ) : (
+        <div className="notification-avatar notification-avatar-placeholder">
+          {notification.fromName?.charAt(0) || '?'}
+        </div>
+      )}
+      <div className="notification-content">
+        <div className="notification-text">{formatNotificationText(notification)}</div>
+        <div className="notification-time">{formatTimeAgo(notification.timestamp)}</div>
+      </div>
+      {showActions && (
+        <div className="notification-actions">
+          {!notification.read && (
+            <button 
+              className="notification-action-btn" 
+              onClick={(e) => handleMarkRead(e, notification)}
+              title={lang === 'ru' ? 'Прочитано' : 'Mark read'}
+            >
+              <Icon data={Check} size={14} />
+            </button>
+          )}
+          <button 
+            className="notification-action-btn notification-delete" 
+            onClick={(e) => handleDelete(e, notification)}
+            title={lang === 'ru' ? 'Удалить' : 'Delete'}
+          >
+            <Icon data={Xmark} size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   const renderNotificationsButton = () => {
     const hasUnread = unreadCount > 0;
-    
-    const dropdownItems = notifications.length > 0 
-      ? notifications.slice(0, 10).map(notification => ({
-          action: () => handleNotificationClick(notification),
-          text: formatNotificationText(notification),
-          className: notification.read ? 'notification-read' : 'notification-unread',
-        }))
-      : [{
-          action: () => {},
-          text: lang === 'ru' ? 'Нет уведомлений' : 'No notifications',
-          disabled: true,
-        }];
+    const displayNotifications = notifications.slice(0, 8);
+
+    const notificationsContent = (
+      <div className="notifications-popup">
+        <div className="notifications-header">
+          <span>{lang === 'ru' ? 'Уведомления' : 'Notifications'}</span>
+          {unreadCount > 0 && (
+            <button className="notifications-mark-all" onClick={handleMarkAllRead}>
+              {lang === 'ru' ? 'Прочитать все' : 'Mark all read'}
+            </button>
+          )}
+        </div>
+        
+        <div className="notifications-list">
+          {displayNotifications.length > 0 ? (
+            displayNotifications.map(n => renderNotificationItem(n))
+          ) : (
+            <div className="notifications-empty">
+              {lang === 'ru' ? 'Нет уведомлений' : 'No notifications'}
+            </div>
+          )}
+        </div>
+        
+        {notifications.length > 8 && (
+          <button 
+            className="notifications-more"
+            onClick={() => setShowAllNotifsDialog(true)}
+          >
+            {lang === 'ru' ? 'Показать все' : 'Show all'} ({notifications.length})
+          </button>
+        )}
+      </div>
+    );
 
     return (
-      <DropdownMenu
-        items={dropdownItems}
-        popupProps={{ placement: 'bottom-end' }}
-        renderSwitcher={(props) => (
+      <>
+        <Popover
+          content={notificationsContent}
+          placement="bottom-end"
+          hasArrow={false}
+        >
           <Button
-            {...props}
             view="flat"
             size="m"
             className="notifications-button"
@@ -115,8 +208,21 @@ export function AppLayout({ children }: AppLayoutProps) {
             <Icon data={hasUnread ? BellDot : Bell} size={18} />
             {hasUnread && <span className="notifications-badge">{unreadCount}</span>}
           </Button>
-        )}
-      />
+        </Popover>
+
+        <Dialog
+          open={showAllNotifsDialog}
+          onClose={() => setShowAllNotifsDialog(false)}
+          size="m"
+        >
+          <Dialog.Header caption={lang === 'ru' ? 'Все уведомления' : 'All notifications'} />
+          <Dialog.Body>
+            <div className="notifications-dialog-list">
+              {notifications.map(n => renderNotificationItem(n))}
+            </div>
+          </Dialog.Body>
+        </Dialog>
+      </>
     );
   };
 
@@ -219,7 +325,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 }]
             }
             popupProps={{ placement: 'right-start' }}
-            renderSwitcher={(props) => (
+            renderSwitcher={(props: Record<string, unknown>) => (
               <FooterItem
                 {...props}
                 id="notifications"

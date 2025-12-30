@@ -130,6 +130,170 @@ body {
   opacity: 0.7;
 }
 
+// Notifications Popup
+.notifications-popup {
+  width: 320px;
+  max-height: 400px;
+  background: var(--g-color-base-background);
+  border-radius: var(--g-border-radius-m);
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--g-color-line-generic);
+  font-weight: 600;
+}
+
+.notifications-mark-all {
+  background: none;
+  border: none;
+  color: var(--notka-brand);
+  font-size: 12px;
+  cursor: pointer;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.notifications-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.notifications-empty {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--g-color-text-secondary);
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  
+  &:hover {
+    background: var(--g-color-base-simple-hover);
+  }
+  
+  &.unread {
+    background: var(--g-color-base-info-light);
+    
+    &:hover {
+      background: var(--g-color-base-info-light-hover);
+    }
+  }
+}
+
+.notification-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.notification-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--notka-brand);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--g-color-text-primary);
+  
+  // Truncate long text
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notification-time {
+  font-size: 11px;
+  color: var(--g-color-text-secondary);
+  margin-top: 2px;
+}
+
+.notification-actions {
+  display: flex;
+  gap: var(--spacing-1);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  
+  .notification-item:hover & {
+    opacity: 1;
+  }
+}
+
+.notification-action-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--g-border-radius-s);
+  border: none;
+  background: transparent;
+  color: var(--g-color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: var(--g-color-base-simple-hover);
+    color: var(--g-color-text-primary);
+  }
+  
+  &.notification-delete:hover {
+    background: var(--g-color-base-danger-light);
+    color: var(--g-color-text-danger);
+  }
+}
+
+.notifications-more {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-3);
+  border: none;
+  border-top: 1px solid var(--g-color-line-generic);
+  background: transparent;
+  color: var(--notka-brand);
+  font-size: 13px;
+  cursor: pointer;
+  
+  &:hover {
+    background: var(--g-color-base-simple-hover);
+  }
+}
+
+.notifications-dialog-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: calc(-1 * var(--spacing-4));
+  
+  .notification-item {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+}
+
 .main-content-mobile {
   flex: 1;
   padding: var(--spacing-4); // 16px
@@ -208,20 +372,28 @@ body {
   padding: var(--spacing-6); // 24px
   text-align: center;
   gap: var(--spacing-4); // 16px
+  background: var(--g-color-base-background);
 }
 
 .login-lang-selector {
   position: absolute;
   top: var(--spacing-4);
   right: var(--spacing-4);
+  z-index: 10;
 }
 
 .login-logo {
-  width: 180px;
-  height: 180px;
+  width: 200px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
   
   svg {
     width: 100%;
@@ -231,8 +403,8 @@ body {
 
 @media (max-width: 768px) {
   .login-logo {
-    width: 140px;
-    height: 140px;
+    width: 160px;
+    height: 160px;
   }
 }
 
@@ -285,7 +457,7 @@ body {
   color: var(--g-color-text-warning);
   padding: 2px 6px;
   border-radius: var(--g-border-radius-xs);
-  margin-left: auto;
+  margin-left: 8px;
 }
 
 .login-hint {
@@ -427,6 +599,35 @@ body {
   50% { opacity: 0.5; transform: scale(1.2); }
 }
 
+// Now Playing Like Button
+.now-playing-like-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--g-color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  
+  &:hover {
+    background: var(--g-color-base-simple-hover);
+    color: var(--g-color-text-primary);
+  }
+  
+  &.liked {
+    color: #ff4d6a;
+    
+    &:hover {
+      color: #ff1a44;
+    }
+  }
+}
+
 // Feed
 .feed {
   display: flex;
@@ -521,7 +722,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-2); // 8px
-  flex-wrap: wrap;
+  min-width: 0; // Allow flex children to shrink below content size
 }
 
 .scrobble-track {
@@ -530,10 +731,14 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0; // Allow text to truncate
+  flex-shrink: 1; // Allow to shrink when label is present
 }
 
 // Spotify liked label styling
 .spotify-liked-label {
+  flex-shrink: 0; // Never shrink the label
+  
   .g-label__content {
     display: flex;
     align-items: center;
@@ -1392,6 +1597,48 @@ body {
 
 .language-native {
   font-size: 13px;
+  color: var(--g-color-text-secondary);
+}
+
+// Settings item with text and description
+.settings-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-item-description {
+  font-size: 12px;
+  color: var(--g-color-text-secondary);
+}
+
+.settings-mode-value {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--g-color-text-secondary);
+  font-size: 13px;
+}
+
+.settings-section {
+  border-top: 1px solid var(--g-color-line-generic);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+}
+
+// Cross-like option styles
+.cross-like-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cross-like-label {
+  font-size: 14px;
+}
+
+.cross-like-description {
+  font-size: 12px;
   color: var(--g-color-text-secondary);
 }
 

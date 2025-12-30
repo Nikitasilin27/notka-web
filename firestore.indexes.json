@@ -1,109 +1,37 @@
 {
   "indexes": [
     {
-      "collectionGroup": "suggestions",
+      "collectionGroup": "scrobbles",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "toUserId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "suggestions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "fromUserId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "suggestions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "toUserId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "isRead",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "followers",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "followingId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "followers",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "followerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "scrobbles",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "odl", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "scrobbles",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "artist",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "trackId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "scrobbles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "odl", "order": "ASCENDING" },
+        { "fieldPath": "trackId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     }
   ],

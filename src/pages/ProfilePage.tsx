@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
@@ -10,7 +10,10 @@ import {
   followUser, 
   unfollowUser,
   getFollowCounts,
-  getUserLikes
+  getUserLikes,
+  likeScrobble,
+  unlikeScrobble,
+  checkLikedScrobbles
 } from '../services/firebase';
 import { getArtistsByIds, getArtistImages } from '../services/spotify';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
@@ -55,7 +58,7 @@ const TRACKS_PER_PAGE = 10;
 
 export function ProfilePage() {
   const { odl } = useParams<{ odl: string }>();
-  const { spotifyId, avatarUrl } = useAuth();
+  const { spotifyId, avatarUrl, user: currentUser } = useAuth();
   const { t, lang } = useI18n();
   const { currentlyPlaying } = useScrobbler();
   
@@ -88,6 +91,7 @@ export function ProfilePage() {
   const [tracksMode, setTracksMode] = useState<'recent' | 'liked'>('recent');
   const [likedScrobbles, setLikedScrobbles] = useState<Scrobble[]>([]);
   const [isLikedLoading, setIsLikedLoading] = useState(false);
+  const [likedScrobbleIds, setLikedScrobbleIds] = useState<Set<string>>(new Set());
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -390,6 +394,46 @@ export function ProfilePage() {
     }
   };
 
+  // Load liked scrobble IDs when scrobbles change
+  useEffect(() => {
+    const loadLikedIds = async () => {
+      if (!spotifyId || currentScrobbles.length === 0) return;
+      const scrobbleIds = currentScrobbles.map(s => s.id);
+      const likedIds = await checkLikedScrobbles(spotifyId, scrobbleIds);
+      setLikedScrobbleIds(likedIds);
+    };
+    loadLikedIds();
+  }, [spotifyId, currentScrobbles]);
+
+  const handleLike = useCallback(async (scrobble: Scrobble) => {
+    if (!spotifyId || !currentUser) return;
+    
+    await likeScrobble(scrobble, {
+      odl: spotifyId,
+      name: currentUser.name || 'User',
+      avatar: avatarUrl || undefined
+    });
+    
+    setLikedScrobbleIds(prev => new Set([...prev, scrobble.id]));
+  }, [spotifyId, currentUser, avatarUrl]);
+
+  const handleUnlike = useCallback(async (scrobbleId: string) => {
+    if (!spotifyId) return;
+    
+    await unlikeScrobble(spotifyId, scrobbleId);
+    
+    setLikedScrobbleIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(scrobbleId);
+      return newSet;
+    });
+    
+    // Remove from liked list if in liked mode
+    if (tracksMode === 'liked') {
+      setLikedScrobbles(prev => prev.filter(s => s.id !== scrobbleId));
+    }
+  }, [spotifyId, tracksMode]);
+
   const handleArtistClick = async (artist: TopArtist) => {
     setSelectedArtist(artist);
     setArtistInfo(null);
@@ -601,14 +645,24 @@ export function ProfilePage() {
             ) : (
               <>
                 <div className="feed">
-                  {paginatedScrobbles.map((scrobble) => (
-                    <ScrobbleCard
-                      key={scrobble.id}
-                      scrobble={scrobble}
-                      timeAgo={formatTimeI18n(scrobble.timestamp, t)}
-                      showUser={false}
-                    />
-                  ))}
+                  {paginatedScrobbles.map((scrobble) => {
+                    // On own profile's "Liked" section, all tracks are by definition liked by us
+                    const isLikedByMe = (isOwnProfile && tracksMode === 'liked') || likedScrobbleIds.has(scrobble.id);
+                    return (
+                      <ScrobbleCard
+                        key={scrobble.id}
+                        scrobble={scrobble}
+                        timeAgo={formatTimeI18n(scrobble.timestamp, t)}
+                        showUser={false}
+                        isLiked={isLikedByMe}
+                        onLike={() => handleLike(scrobble)}
+                        onUnlike={() => handleUnlike(scrobble.id)}
+                        canLike={!!spotifyId}
+                        lang={lang}
+                        showSpotifyLiked={isOwnProfile}
+                      />
+                    );
+                  })}
                 </div>
                 
                 {filteredScrobbles.length > TRACKS_PER_PAGE && (

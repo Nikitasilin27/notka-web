@@ -1,14 +1,28 @@
-import { Skeleton } from '@gravity-ui/uikit';
+import { Skeleton, Icon } from '@gravity-ui/uikit';
+import { Heart, HeartFill } from '@gravity-ui/icons';
 import { SpotifyCurrentlyPlaying } from '../types';
 import { useI18n } from '../hooks/useI18n';
 
 interface NowPlayingProps {
   currentlyPlaying: SpotifyCurrentlyPlaying | null;
   isLoading?: boolean;
+  isLiked?: boolean;
+  onLike?: () => void;
+  onUnlike?: () => void;
+  canLike?: boolean;
 }
 
-export function NowPlaying({ currentlyPlaying, isLoading }: NowPlayingProps) {
+export function NowPlaying({ currentlyPlaying, isLoading, isLiked, onLike, onUnlike, canLike }: NowPlayingProps) {
   const { lang } = useI18n();
+  
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isLiked && onUnlike) {
+      onUnlike();
+    } else if (!isLiked && onLike) {
+      onLike();
+    }
+  };
   
   // Show skeleton while loading
   if (isLoading) {
@@ -65,6 +79,18 @@ export function NowPlaying({ currentlyPlaying, isLoading }: NowPlayingProps) {
           🎵
         </div>
       )}
+      
+      {/* Like button */}
+      {canLike && (
+        <button
+          className={`now-playing-like-btn ${isLiked ? 'liked' : ''}`}
+          onClick={handleLikeClick}
+          title={isLiked ? (lang === 'ru' ? 'Убрать из понравившихся' : 'Remove from likes') : (lang === 'ru' ? 'Добавить в понравившиеся' : 'Add to likes')}
+        >
+          <Icon data={isLiked ? HeartFill : Heart} size={18} />
+        </button>
+      )}
+      
       <div className="now-playing-info">
         <div className="now-playing-track">{track.name}</div>
         <div className="now-playing-artist">

@@ -10,7 +10,8 @@ const SCOPES = [
   'user-read-playback-state',
   'user-read-private',
   'user-read-email',
-  'user-library-read'  // For checking liked tracks
+  'user-library-read',   // For checking liked tracks
+  'user-library-modify'  // For adding/removing liked tracks
 ].join(' ');
 
 // PKCE helpers
@@ -379,4 +380,62 @@ export async function checkTracksLiked(trackIds: string[]): Promise<Map<string, 
 export async function isTrackLiked(trackId: string): Promise<boolean> {
   const result = await checkTracksLiked([trackId]);
   return result.get(trackId) || false;
+}
+
+/**
+ * Add track to Spotify Liked Songs
+ */
+export async function addTrackToSpotifyLikes(trackId: string): Promise<boolean> {
+  const tokens = getTokens();
+  if (!tokens) return false;
+  
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${tokens.accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) return false;
+      return addTrackToSpotifyLikes(trackId);
+    }
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error adding track to Spotify likes:', error);
+    return false;
+  }
+}
+
+/**
+ * Remove track from Spotify Liked Songs
+ */
+export async function removeTrackFromSpotifyLikes(trackId: string): Promise<boolean> {
+  const tokens = getTokens();
+  if (!tokens) return false;
+  
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${tokens.accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) return false;
+      return removeTrackFromSpotifyLikes(trackId);
+    }
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error removing track from Spotify likes:', error);
+    return false;
+  }
 }

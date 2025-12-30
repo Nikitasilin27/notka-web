@@ -1,20 +1,88 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Switch, RadioGroup, Radio, Button } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { Moon, Sun, Globe, ChevronDown, ChevronUp, ArrowRightFromSquare } from '@gravity-ui/icons';
+import { Moon, Sun, Globe, ChevronDown, ChevronUp, ArrowRightFromSquare, Heart } from '@gravity-ui/icons';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n, Language } from '../hooks/useI18n';
 import { useAuth } from '../hooks/useAuth';
+import { getUser, createOrUpdateUser } from '../services/firebase';
+
+type CrossLikeMode = 'spotify_to_notka' | 'notka_to_spotify' | 'both' | 'none';
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { t, lang, setLang } = useI18n();
-  const { logout } = useAuth();
+  const { logout, spotifyId, refreshUser } = useAuth();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [isLikesOpen, setIsLikesOpen] = useState(false);
+  const [crossLikeEnabled, setCrossLikeEnabled] = useState(true);
+  const [crossLikeMode, setCrossLikeMode] = useState<CrossLikeMode>('spotify_to_notka');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load user settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!spotifyId) return;
+      const user = await getUser(spotifyId);
+      if (user) {
+        setCrossLikeEnabled(user.crossLikeEnabled ?? true);
+        setCrossLikeMode(user.crossLikeMode ?? 'spotify_to_notka');
+      }
+    };
+    loadSettings();
+  }, [spotifyId]);
+
+  const handleCrossLikeEnabledChange = async (enabled: boolean) => {
+    setCrossLikeEnabled(enabled);
+    if (!spotifyId) return;
+    
+    setIsSaving(true);
+    await createOrUpdateUser({
+      odl: spotifyId,
+      crossLikeEnabled: enabled
+    });
+    await refreshUser();
+    setIsSaving(false);
+  };
+
+  const handleCrossLikeModeChange = async (mode: CrossLikeMode) => {
+    setCrossLikeMode(mode);
+    if (!spotifyId) return;
+    
+    setIsSaving(true);
+    await createOrUpdateUser({
+      odl: spotifyId,
+      crossLikeMode: mode
+    });
+    await refreshUser();
+    setIsSaving(false);
+  };
 
   const handleLogout = () => {
     logout();
     window.location.href = '/';
+  };
+
+  const crossLikeModeLabels = {
+    spotify_to_notka: lang === 'ru' ? 'Из Spotify в Notka' : 'From Spotify to Notka',
+    notka_to_spotify: lang === 'ru' ? 'Из Notka в Spotify' : 'From Notka to Spotify',
+    both: lang === 'ru' ? 'Двусторонняя синхронизация' : 'Two-way sync',
+    none: lang === 'ru' ? 'Без синхронизации' : 'No sync'
+  };
+
+  const crossLikeModeDescriptions = {
+    spotify_to_notka: lang === 'ru' 
+      ? 'Лайки из Spotify будут автоматически добавляться в Notka' 
+      : 'Likes from Spotify will be automatically added to Notka',
+    notka_to_spotify: lang === 'ru' 
+      ? 'Лайки в Notka будут добавляться в вашу библиотеку Spotify' 
+      : 'Likes in Notka will be added to your Spotify library',
+    both: lang === 'ru' 
+      ? 'Лайки синхронизируются в обоих направлениях' 
+      : 'Likes sync in both directions',
+    none: lang === 'ru' 
+      ? 'Лайки в Notka и Spotify независимы друг от друга' 
+      : 'Likes in Notka and Spotify are independent'
   };
 
   return (
@@ -71,6 +139,64 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Cross-likes settings */}
+        <div className="settings-item">
+          <div className="settings-item-info">
+            <Icon data={Heart} size={20} />
+            <div className="settings-item-text">
+              <span>{lang === 'ru' ? 'Синхронизация лайков' : 'Like sync'}</span>
+              <span className="settings-item-description">
+                {lang === 'ru' ? 'Между Spotify и Notka' : 'Between Spotify and Notka'}
+              </span>
+            </div>
+          </div>
+          <Switch
+            checked={crossLikeEnabled}
+            onUpdate={handleCrossLikeEnabledChange}
+            size="m"
+            disabled={isSaving}
+          />
+        </div>
+        
+        {crossLikeEnabled && (
+          <div className="settings-accordion">
+            <button 
+              className="settings-accordion-header"
+              onClick={() => setIsLikesOpen(!isLikesOpen)}
+            >
+              <div className="settings-item-info">
+                <span style={{ marginLeft: 28 }}>
+                  {lang === 'ru' ? 'Режим синхронизации' : 'Sync mode'}
+                </span>
+              </div>
+              <div className="settings-mode-value">
+                <span>{crossLikeModeLabels[crossLikeMode]}</span>
+                <Icon data={isLikesOpen ? ChevronUp : ChevronDown} size={16} />
+              </div>
+            </button>
+            
+            {isLikesOpen && (
+              <div className="settings-accordion-content">
+                <RadioGroup
+                  value={crossLikeMode}
+                  onUpdate={(value) => handleCrossLikeModeChange(value as CrossLikeMode)}
+                  direction="vertical"
+                  disabled={isSaving}
+                >
+                  {(['spotify_to_notka', 'notka_to_spotify', 'both', 'none'] as CrossLikeMode[]).map(mode => (
+                    <Radio key={mode} value={mode}>
+                      <div className="cross-like-option">
+                          <span className="cross-like-label">{crossLikeModeLabels[mode]}</span>
+                          <span className="cross-like-description">{crossLikeModeDescriptions[mode]}</span>
+                        </div>
+                      </Radio>
+                    ))}
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Logout button - primarily for mobile */}
         <div className="settings-logout">

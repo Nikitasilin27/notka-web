@@ -42,16 +42,24 @@ export async function createOrUpdateUser(userData: Partial<User> & { odl: string
   const docRef = doc(db, 'users', userData.odl);
   const docSnap = await getDoc(docRef);
   
+  // Filter out undefined values - Firebase doesn't accept them
+  const cleanData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(userData)) {
+    if (value !== undefined) {
+      cleanData[key] = value;
+    }
+  }
+  
   if (docSnap.exists()) {
     // Update existing user
     await updateDoc(docRef, {
-      ...userData,
+      ...cleanData,
       lastUpdated: Timestamp.now()
     });
   } else {
     // Create new user
     await setDoc(docRef, {
-      ...userData,
+      ...cleanData,
       lastUpdated: Timestamp.now()
     });
   }
@@ -564,6 +572,14 @@ export async function getUnreadNotificationCount(odl: string): Promise<number> {
 export async function markNotificationRead(notificationId: string): Promise<void> {
   const notificationRef = doc(db, 'notifications', notificationId);
   await updateDoc(notificationRef, { read: true });
+}
+
+/**
+ * Delete notification
+ */
+export async function deleteNotification(notificationId: string): Promise<void> {
+  const notificationRef = doc(db, 'notifications', notificationId);
+  await deleteDoc(notificationRef);
 }
 
 /**

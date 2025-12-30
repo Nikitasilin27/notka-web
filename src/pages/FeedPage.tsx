@@ -27,12 +27,43 @@ export function FeedPage() {
   const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());
   const [likedScrobbleIds, setLikedScrobbleIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [nowPlayingLiked, setNowPlayingLiked] = useState(false);
 
   useEffect(() => {
     loadScrobbles();
     const interval = setInterval(loadScrobbles, 30000);
     return () => clearInterval(interval);
   }, [activeTab, spotifyId]);
+
+  // Check if currently playing track is liked
+  useEffect(() => {
+    const checkNowPlayingLiked = async () => {
+      if (!currentlyPlaying?.item?.id || !spotifyId) {
+        setNowPlayingLiked(false);
+        return;
+      }
+      
+      const trackId = currentlyPlaying.item.id;
+      
+      // Check existing scrobble
+      const matchingScrobble = scrobbles.find(s => s.trackId === trackId);
+      if (matchingScrobble && likedScrobbleIds.has(matchingScrobble.id)) {
+        setNowPlayingLiked(true);
+        return;
+      }
+      
+      // Check pseudo-scrobble ID
+      const pseudoScrobbleId = `now_${spotifyId}_${trackId}`;
+      if (likedScrobbleIds.has(pseudoScrobbleId)) {
+        setNowPlayingLiked(true);
+        return;
+      }
+      
+      setNowPlayingLiked(false);
+    };
+    
+    checkNowPlayingLiked();
+  }, [currentlyPlaying?.item?.id, spotifyId, scrobbles, likedScrobbleIds]);
 
   const loadScrobbles = async () => {
     try {
@@ -94,6 +125,77 @@ export function FeedPage() {
     });
   }, [spotifyId]);
 
+  // Like currently playing track
+  const handleNowPlayingLike = useCallback(async () => {
+    if (!spotifyId || !currentlyPlaying?.item) return;
+    
+    const track = currentlyPlaying.item;
+    
+    // First check if there's already a scrobble for this track
+    const existingScrobble = scrobbles.find(s => s.trackId === track.id);
+    
+    if (existingScrobble) {
+      // Like the existing scrobble
+      await likeScrobble(existingScrobble, {
+        odl: spotifyId,
+        name: user?.name || 'User',
+        avatar: avatarUrl || undefined
+      });
+      setLikedScrobbleIds(prev => new Set([...prev, existingScrobble.id]));
+    } else {
+      // Create a pseudo-scrobble with consistent ID (no timestamp)
+      const pseudoScrobbleId = `now_${spotifyId}_${track.id}`;
+      const pseudoScrobble: Scrobble = {
+        id: pseudoScrobbleId,
+        odl: spotifyId,
+        title: track.name,
+        artist: track.artists.map(a => a.name).join(', '),
+        trackId: track.id,
+        artistId: track.artists[0]?.id,
+        albumArtURL: track.album.images[0]?.url,
+        timestamp: new Date()
+      };
+      
+      await likeScrobble(pseudoScrobble, {
+        odl: spotifyId,
+        name: user?.name || 'User',
+        avatar: avatarUrl || undefined
+      });
+      setLikedScrobbleIds(prev => new Set([...prev, pseudoScrobbleId]));
+    }
+    
+    setNowPlayingLiked(true);
+  }, [spotifyId, currentlyPlaying?.item, user?.name, avatarUrl, scrobbles]);
+
+  const handleNowPlayingUnlike = useCallback(async () => {
+    if (!spotifyId || !currentlyPlaying?.item) return;
+    
+    const trackId = currentlyPlaying.item.id;
+    
+    // Try to find existing scrobble first
+    const existingScrobble = scrobbles.find(s => s.trackId === trackId);
+    
+    if (existingScrobble) {
+      await unlikeScrobble(spotifyId, existingScrobble.id);
+      setLikedScrobbleIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(existingScrobble.id);
+        return newSet;
+      });
+    } else {
+      // Try pseudo-scrobble ID
+      const pseudoScrobbleId = `now_${spotifyId}_${trackId}`;
+      await unlikeScrobble(spotifyId, pseudoScrobbleId);
+      setLikedScrobbleIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pseudoScrobbleId);
+        return newSet;
+      });
+    }
+    
+    setNowPlayingLiked(false);
+  }, [spotifyId, currentlyPlaying?.item, scrobbles]);
+
   const renderEmptyState = () => {
     if (activeTab === 'following') {
       return (
@@ -127,7 +229,14 @@ export function FeedPage() {
   return (
     <div className="feed-page">
       <div className="feed-sticky-header">
-        <NowPlaying currentlyPlaying={currentlyPlaying} isLoading={isScrobblerLoading} />
+        <NowPlaying 
+          currentlyPlaying={currentlyPlaying} 
+          isLoading={isScrobblerLoading}
+          isLiked={nowPlayingLiked}
+          onLike={handleNowPlayingLike}
+          onUnlike={handleNowPlayingUnlike}
+          canLike={!!spotifyId && !!currentlyPlaying?.item}
+        />
         
         <div className="feed-tabs">
           <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>
@@ -161,8 +270,9 @@ export function FeedPage() {
                   isLiked={likedScrobbleIds.has(scrobble.id)}
                   onLike={() => handleLike(scrobble)}
                   onUnlike={() => handleUnlike(scrobble.id)}
-                  canLike={!isOwnScrobble && !!spotifyId}
+                  canLike={!!spotifyId}
                   lang={lang}
+                  showSpotifyLiked={isOwnScrobble}
                 />
               );
             })}

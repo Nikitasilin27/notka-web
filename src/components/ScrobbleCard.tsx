@@ -29,6 +29,8 @@ interface ScrobbleCardProps {
   onUnlike?: () => Promise<void>;
   canLike?: boolean;
   lang?: string;
+  // Show "В любимом" badge only on own profile
+  showSpotifyLiked?: boolean;
 }
 
 export function ScrobbleCard({ 
@@ -40,7 +42,8 @@ export function ScrobbleCard({
   onLike,
   onUnlike,
   canLike = true,
-  lang = 'ru'
+  lang = 'ru',
+  showSpotifyLiked = false
 }: ScrobbleCardProps) {
   const [isLiking, setIsLiking] = useState(false);
   const [localLiked, setLocalLiked] = useState(isLiked);
@@ -121,7 +124,7 @@ export function ScrobbleCard({
       <div className="scrobble-info">
         <div className="scrobble-track-row">
           <span className="scrobble-track">{scrobble.title}</span>
-          {scrobble.isLikedOnSpotify && (
+          {showSpotifyLiked && scrobble.isLikedOnSpotify && (
             <Label
               size="xs"
               theme="normal"
