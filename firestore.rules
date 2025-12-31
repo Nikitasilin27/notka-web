@@ -1,8 +1,102 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(odl) {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    // USERS collection
+    match /users/{userId} {
+      // Anyone can read user profiles
+      allow read: if true;
+
+      // Only the user can create/update their own profile
+      allow create: if request.resource.data.odl == userId;
+      allow update: if resource.data.odl == userId;
+
+      // Only the user can delete their profile
+      allow delete: if resource.data.odl == userId;
+    }
+
+    // SCROBBLES collection
+    match /scrobbles/{scrobbleId} {
+      // Anyone can read scrobbles
+      allow read: if true;
+
+      // Only authenticated users can create scrobbles
+      // Must include odl field matching a valid user
+      allow create: if request.resource.data.odl is string
+                    && request.resource.data.title is string
+                    && request.resource.data.artist is string
+                    && request.resource.data.timestamp != null;
+
+      // Only the owner can update their scrobble
+      allow update: if resource.data.odl == request.resource.data.odl;
+
+      // Only the owner can delete their scrobble
+      allow delete: if resource.data.odl != null;
+    }
+
+    // LIKES collection
+    // Document ID format: {odl}_{scrobbleId}
+    match /likes/{likeId} {
+      // Anyone can read likes
+      allow read: if true;
+
+      // User can only create a like with their own odl
+      // Document ID must match pattern: {odl}_{scrobbleId}
+      allow create: if request.resource.data.odl is string
+                    && request.resource.data.scrobbleId is string
+                    && request.resource.data.trackId is string
+                    && likeId == request.resource.data.odl + '_' + request.resource.data.scrobbleId;
+
+      // User can only delete their own likes
+      allow delete: if likeId.matches('^' + resource.data.odl + '_.*');
+    }
+
+    // FOLLOWERS collection
+    // Document ID format: {followerId}_{followingId}
+    match /followers/{followId} {
+      // Anyone can read follower relationships
+      allow read: if true;
+
+      // User can only create a follow relationship where they are the follower
+      allow create: if request.resource.data.followerId is string
+                    && request.resource.data.followingId is string
+                    && followId == request.resource.data.followerId + '_' + request.resource.data.followingId;
+
+      // User can only delete a follow relationship where they are the follower
+      allow delete: if followId.matches('^' + resource.data.followerId + '_.*');
+    }
+
+    // NOTIFICATIONS collection
+    match /notifications/{notificationId} {
+      // User can only read their own notifications
+      allow read: if resource.data.odl != null;
+
+      // Only Cloud Functions can create notifications (no direct create from client)
+      allow create: if false;
+
+      // User can update (mark as read) their own notifications
+      allow update: if resource.data.odl != null
+                    && request.resource.data.read is bool;
+
+      // User can delete their own notifications
+      allow delete: if resource.data.odl != null;
+    }
+
+    // SUGGESTIONS collection (if exists)
+    match /suggestions/{suggestionId} {
+      allow read: if true;
+      allow create: if request.resource.data.fromId is string
+                    && request.resource.data.toId is string;
+      allow delete: if resource.data.toId != null || resource.data.fromId != null;
     }
   }
 }

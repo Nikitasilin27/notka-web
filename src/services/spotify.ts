@@ -1,9 +1,9 @@
 import { SpotifyTokens, SpotifyCurrentlyPlaying } from '../types';
 
-const CLIENT_ID = '7a03306f3ef744b29ce0d9d6c33a812a';
-const REDIRECT_URI = import.meta.env.PROD 
-  ? 'https://notka-mvp.web.app/callback' 
-  : 'http://127.0.0.1:5173/callback';
+const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+const REDIRECT_URI = import.meta.env.PROD
+  ? import.meta.env.VITE_SPOTIFY_REDIRECT_URI_PROD
+  : import.meta.env.VITE_SPOTIFY_REDIRECT_URI_DEV;
 const SCOPES = [
   'user-read-currently-playing',
   'user-read-recently-played',
