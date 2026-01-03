@@ -29,3 +29,4 @@ firebase-debug.log
 # Logs
 *.log
 npm-debug.log*
+vite.config.js
