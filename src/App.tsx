@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@gravity-ui/uikit';
-import { Toaster } from 'react-hot-toast';
+import { ThemeProvider, Loader } from '@gravity-ui/uikit';
+import { ToasterComponent, ToasterProvider } from '@gravity-ui/uikit';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeContextProvider, useTheme } from './hooks/useTheme';
 import { I18nProvider } from './hooks/useI18n';
@@ -12,7 +12,6 @@ import { FeedPage } from './pages/FeedPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
-import { Loader } from '@gravity-ui/uikit';
 
 // Custom theme - must be imported AFTER Gravity UI
 import './styles/theme.css';
@@ -127,34 +126,14 @@ function ThemedApp() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: theme === 'dark' ? '#333' : '#fff',
-            color: theme === 'dark' ? '#fff' : '#333',
-          },
-          success: {
-            iconTheme: {
-              primary: '#4bb34b',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: '#e74c3c',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
+      <ToasterProvider>
+        <ToasterComponent />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </ToasterProvider>
     </ThemeProvider>
   );
 }

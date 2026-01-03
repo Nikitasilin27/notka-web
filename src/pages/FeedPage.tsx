@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader, TabProvider, TabList, Tab } from '@gravity-ui/uikit';
+import { TabProvider, TabList, Tab } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
-import { 
-  getRecentScrobbles, 
-  getUserScrobbles, 
-  getFollowingScrobbles, 
+import { useOnboarding } from '../hooks/useOnboarding';
+import {
+  getRecentScrobbles,
+  getUserScrobbles,
+  getFollowingScrobbles,
   getUser,
   likeScrobble,
   unlikeScrobble,
@@ -15,6 +16,8 @@ import {
 import { Scrobble, User } from '../types';
 import { NowPlaying } from '../components/NowPlaying';
 import { ScrobbleCard } from '../components/ScrobbleCard';
+import { ScrobbleCardSkeletonList } from '../components/ScrobbleCardSkeleton';
+import { showSuccess, showError } from '../utils/notifications';
 
 type TabId = 'all' | 'following' | 'my';
 
@@ -22,6 +25,7 @@ export function FeedPage() {
   const { spotifyId, user, avatarUrl } = useAuth();
   const { currentlyPlaying, isLoading: isScrobblerLoading } = useScrobbler();
   const { t, lang } = useI18n();
+  useOnboarding(); // Show welcome message for new users
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());
@@ -103,26 +107,45 @@ export function FeedPage() {
 
   const handleLike = useCallback(async (scrobble: Scrobble) => {
     if (!spotifyId) return;
-    
-    await likeScrobble(scrobble, {
-      odl: spotifyId,
-      name: user?.name || 'User',
-      avatar: avatarUrl || undefined
-    });
-    
+
+    // Optimistic UI: update immediately
     setLikedScrobbleIds(prev => new Set([...prev, scrobble.id]));
+
+    try {
+      await likeScrobble(scrobble, {
+        odl: spotifyId,
+        name: user?.name || 'User',
+        avatar: avatarUrl || undefined
+      });
+      showSuccess('Liked!');
+    } catch (error) {
+      // Rollback on error
+      setLikedScrobbleIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(scrobble.id);
+        return newSet;
+      });
+      showError('Failed to like');
+    }
   }, [spotifyId, user?.name, avatarUrl]);
 
   const handleUnlike = useCallback(async (scrobbleId: string) => {
     if (!spotifyId) return;
-    
-    await unlikeScrobble(spotifyId, scrobbleId);
-    
+
+    // Optimistic UI: update immediately
     setLikedScrobbleIds(prev => {
       const newSet = new Set(prev);
       newSet.delete(scrobbleId);
       return newSet;
     });
+
+    try {
+      await unlikeScrobble(spotifyId, scrobbleId);
+    } catch (error) {
+      // Rollback on error
+      setLikedScrobbleIds(prev => new Set([...prev, scrobbleId]));
+      showError('Failed to unlike');
+    }
   }, [spotifyId]);
 
   // Like currently playing track
@@ -251,8 +274,8 @@ export function FeedPage() {
 
       <div className="feed-content">
         {isLoading ? (
-          <div className="loading-container">
-            <Loader size="l" />
+          <div className="feed">
+            <ScrobbleCardSkeletonList count={5} />
           </div>
         ) : scrobbles.length === 0 ? (
           renderEmptyState()

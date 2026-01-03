@@ -1,40 +1,55 @@
-import toast from 'react-hot-toast';
+import { toaster } from '@gravity-ui/uikit/toaster-singleton';
 
 /**
  * Show success notification
  */
 export function showSuccess(message: string): void {
-  toast.success(message);
+  toaster.add({
+    name: 'success-toast',
+    title: message,
+    theme: 'success',
+    isCloseable: true,
+    autoHiding: 4000,
+  });
 }
 
 /**
  * Show error notification
  */
 export function showError(message: string): void {
-  toast.error(message);
+  toaster.add({
+    name: 'error-toast',
+    title: message,
+    theme: 'danger',
+    isCloseable: true,
+    autoHiding: 5000,
+  });
 }
 
 /**
  * Show info notification
  */
 export function showInfo(message: string): void {
-  toast(message, {
-    icon: 'ℹ️',
+  toaster.add({
+    name: 'info-toast',
+    title: message,
+    theme: 'info',
+    isCloseable: true,
+    autoHiding: 4000,
   });
 }
 
 /**
- * Show loading notification with promise
+ * Show warning notification
  */
-export function showLoading<T>(
-  promise: Promise<T>,
-  messages: {
-    loading: string;
-    success: string;
-    error: string;
-  }
-): Promise<T> {
-  return toast.promise(promise, messages);
+export function showWarning(message: string): void {
+  toaster.add({
+    name: 'warning-toast',
+    title: message,
+    theme: 'warning',
+    isCloseable: true,
+    autoHiding: 4000,
+  });
 }
 
 /**
@@ -50,17 +65,24 @@ export async function withToast<T>(
 ): Promise<T | null> {
   const { loading, success, error } = options;
 
-  let toastId: string | undefined;
+  let loadingToastName: string | undefined;
 
   try {
     if (loading) {
-      toastId = toast.loading(loading);
+      loadingToastName = 'loading-toast-' + Date.now();
+      toaster.add({
+        name: loadingToastName,
+        title: loading,
+        theme: 'info',
+        isCloseable: false,
+        autoHiding: false,
+      });
     }
 
     const result = await operation();
 
-    if (toastId) {
-      toast.dismiss(toastId);
+    if (loadingToastName) {
+      toaster.remove(loadingToastName);
     }
 
     if (success) {
@@ -69,8 +91,8 @@ export async function withToast<T>(
 
     return result;
   } catch (err) {
-    if (toastId) {
-      toast.dismiss(toastId);
+    if (loadingToastName) {
+      toaster.remove(loadingToastName);
     }
 
     const errorMessage = typeof error === 'function'
