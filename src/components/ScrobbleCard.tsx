@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Icon, Label } from '@gravity-ui/uikit';
 import { Heart, HeartFill } from '@gravity-ui/icons';
 import { Scrobble, User } from '../types';
+import { LazyImage } from './LazyImage';
 
 // Custom Spotify icon SVG - centered with brand color
 const SpotifyIcon = () => (
@@ -86,10 +87,15 @@ export function ScrobbleCard({
       {/* Album Art */}
       <div className="scrobble-art-container">
         {scrobble.albumArtURL ? (
-          <img 
-            src={scrobble.albumArtURL} 
+          <LazyImage
+            src={scrobble.albumArtURL}
             alt={scrobble.album || scrobble.title}
             className="scrobble-art"
+            placeholder={
+              <div className="scrobble-art scrobble-art-placeholder">
+                <MusicNotePlaceholder />
+              </div>
+            }
           />
         ) : (
           <div className="scrobble-art scrobble-art-placeholder">
@@ -141,8 +147,8 @@ export function ScrobbleCard({
         
         {showUser && user && (
           <Link to={`/profile/${user.odl}`} className="scrobble-user">
-            <img 
-              src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'} 
+            <LazyImage
+              src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'}
               alt={user.name}
               className="scrobble-user-avatar"
             />

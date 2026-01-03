@@ -1,13 +1,13 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  setDoc, 
+import {
+  collection,
+  doc,
+  getDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
-  query, 
-  orderBy, 
-  limit, 
+  query,
+  orderBy,
+  limit,
   getDocs,
   where,
   Timestamp,
@@ -18,16 +18,23 @@ import {
 import { signInWithCustomToken, signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { User, Scrobble } from '../types';
+import { userCache } from '../utils/cache';
 
 // User operations
 export async function getUser(odl: string): Promise<User | null> {
+  // Check cache first
+  const cached = userCache.get(odl);
+  if (cached) {
+    return cached;
+  }
+
   const docRef = doc(db, 'users', odl);
   const docSnap = await getDoc(docRef);
-  
+
   if (!docSnap.exists()) return null;
-  
+
   const data = docSnap.data();
-  return {
+  const user = {
     ...data,
     odl: docSnap.id,
     lastUpdated: data.lastUpdated?.toDate(),
@@ -36,6 +43,11 @@ export async function getUser(odl: string): Promise<User | null> {
       timestamp: data.currentTrack.timestamp?.toDate()
     } : undefined
   } as User;
+
+  // Cache the user data
+  userCache.set(odl, user);
+
+  return user;
 }
 
 export async function createOrUpdateUser(userData: Partial<User> & { odl: string }): Promise<void> {

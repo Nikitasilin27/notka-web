@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, Loader } from '@gravity-ui/uikit';
 import { ToasterComponent, ToasterProvider } from '@gravity-ui/uikit';
@@ -7,16 +8,18 @@ import { ThemeContextProvider, useTheme } from './hooks/useTheme';
 import { I18nProvider } from './hooks/useI18n';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppLayout } from './components/AppLayout';
-import { LoginPage } from './pages/LoginPage';
-import { CallbackPage } from './pages/CallbackPage';
-import { FeedPage } from './pages/FeedPage';
-import { UsersPage } from './pages/UsersPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { SettingsPage } from './pages/SettingsPage';
 
 // Custom theme - must be imported AFTER Gravity UI
 import './styles/theme.css';
 import './styles/error-boundary.css';
+
+// Lazy load pages for code splitting
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const CallbackPage = lazy(() => import('./pages/CallbackPage').then(m => ({ default: m.CallbackPage })));
+const FeedPage = lazy(() => import('./pages/FeedPage').then(m => ({ default: m.FeedPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
 
 
@@ -56,69 +59,85 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh'
+    }}>
+      <Loader size="l" />
+    </div>
+  );
+}
+
 function AppRoutes() {
   return (
-    <Routes>
-      <Route 
-        path="/login" 
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        } 
-      />
-      <Route path="/callback" element={<CallbackPage />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <FeedPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/users"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <UsersPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <ProfilePage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile/:odl"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <ProfilePage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <SettingsPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route path="/callback" element={<CallbackPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <FeedPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <UsersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProfilePage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile/:odl"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProfilePage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SettingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
   );
 }
 
