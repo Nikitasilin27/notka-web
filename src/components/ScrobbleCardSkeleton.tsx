@@ -5,18 +5,16 @@ export function ScrobbleCardSkeleton() {
     <div className="scrobble-card">
       {/* Album Art */}
       <div className="scrobble-art-container">
-        <Skeleton className="scrobble-art" style={{ width: 64, height: 64 }} />
+        <Skeleton className="scrobble-art" style={{ width: 64, height: 64, borderRadius: 4 }} />
       </div>
 
-      {/* Like Button placeholder */}
-      <div style={{ width: 32, height: 32, marginLeft: 8 }}>
-        <Skeleton style={{ width: 32, height: 32, borderRadius: '50%' }} />
-      </div>
+      {/* Like Button placeholder - matching real button placement */}
+      <Skeleton className="scrobble-like-btn" style={{ width: 32, height: 32, borderRadius: '50%' }} />
 
       {/* Track Info */}
       <div className="scrobble-info">
         {/* Track title skeleton */}
-        <Skeleton style={{ width: '70%', height: 18, marginBottom: 4 }} />
+        <Skeleton style={{ width: '70%', height: 18, marginBottom: 6 }} />
 
         {/* Artist name skeleton */}
         <Skeleton style={{ width: '50%', height: 14, marginBottom: 8 }} />
@@ -30,7 +28,7 @@ export function ScrobbleCardSkeleton() {
 
       {/* Likes Count + Time */}
       <div className="scrobble-meta">
-        <Skeleton style={{ width: 60, height: 14 }} />
+        <Skeleton style={{ width: 60, height: 12 }} />
       </div>
     </div>
   );

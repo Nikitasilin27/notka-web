@@ -184,7 +184,7 @@ export function SettingsPage() {
                   direction="vertical"
                   disabled={isSaving}
                 >
-                  {(['spotify_to_notka', 'notka_to_spotify', 'both', 'none'] as CrossLikeMode[]).map(mode => (
+                  {(['spotify_to_notka', 'notka_to_spotify', 'both'] as CrossLikeMode[]).map(mode => (
                     <Radio key={mode} value={mode}>
                       <div className="cross-like-option">
                           <span className="cross-like-label">{crossLikeModeLabels[mode]}</span>
