@@ -630,3 +630,88 @@ export function subscribeToNotifications(
     callback(notifications);
   });
 }
+
+// ============================================
+// REAL-TIME SCROBBLES SUBSCRIPTIONS
+// ============================================
+
+/**
+ * Subscribe to recent scrobbles (real-time)
+ */
+export function subscribeToRecentScrobbles(
+  limitCount: number,
+  callback: (scrobbles: Scrobble[]) => void
+): () => void {
+  const scrobblesRef = collection(db, 'scrobbles');
+  const q = query(
+    scrobblesRef,
+    orderBy('timestamp', 'desc'),
+    limit(limitCount)
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const scrobbles = snapshot.docs.map(doc => docToScrobble(doc));
+    callback(scrobbles);
+  });
+}
+
+/**
+ * Subscribe to user's scrobbles (real-time)
+ */
+export function subscribeToUserScrobbles(
+  odl: string,
+  limitCount: number,
+  callback: (scrobbles: Scrobble[]) => void
+): () => void {
+  const scrobblesRef = collection(db, 'scrobbles');
+  const q = query(
+    scrobblesRef,
+    orderBy('timestamp', 'desc'),
+    limit(500) // Get more to filter client-side
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const userScrobbles = snapshot.docs
+      .map(doc => docToScrobble(doc))
+      .filter(s => s.odl === odl || s.userId === odl)
+      .slice(0, limitCount);
+
+    callback(userScrobbles);
+  });
+}
+
+/**
+ * Subscribe to following scrobbles (real-time)
+ */
+export function subscribeToFollowingScrobbles(
+  userId: string,
+  limitCount: number,
+  callback: (scrobbles: Scrobble[]) => void
+): () => void {
+  // First get following list
+  getFollowing(userId).then(followingIds => {
+    if (followingIds.length === 0) {
+      callback([]);
+      return;
+    }
+
+    const scrobblesRef = collection(db, 'scrobbles');
+    const q = query(
+      scrobblesRef,
+      orderBy('timestamp', 'desc'),
+      limit(300)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const followingScrobbles = snapshot.docs
+        .map(doc => docToScrobble(doc))
+        .filter(s => followingIds.includes(s.odl) || followingIds.includes(s.userId || ''))
+        .slice(0, limitCount);
+
+      callback(followingScrobbles);
+    });
+  });
+
+  // Return empty unsubscribe for now
+  return () => {};
+}

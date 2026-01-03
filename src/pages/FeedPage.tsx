@@ -5,13 +5,13 @@ import { useScrobbler } from '../hooks/useScrobbler';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
 import { useOnboarding } from '../hooks/useOnboarding';
 import {
-  getRecentScrobbles,
-  getUserScrobbles,
-  getFollowingScrobbles,
   getUser,
   likeScrobble,
   unlikeScrobble,
-  checkLikedScrobbles
+  checkLikedScrobbles,
+  subscribeToRecentScrobbles,
+  subscribeToUserScrobbles,
+  subscribeToFollowingScrobbles
 } from '../services/firebase';
 import { Scrobble, User } from '../types';
 import { NowPlaying } from '../components/NowPlaying';
@@ -33,10 +33,30 @@ export function FeedPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [nowPlayingLiked, setNowPlayingLiked] = useState(false);
 
+  // Real-time subscription to scrobbles
   useEffect(() => {
-    loadScrobbles();
-    const interval = setInterval(loadScrobbles, 30000);
-    return () => clearInterval(interval);
+    if (!spotifyId && activeTab !== 'all') {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
+    let unsubscribe: (() => void) | undefined;
+
+    if (activeTab === 'all') {
+      unsubscribe = subscribeToRecentScrobbles(50, handleScrobblesUpdate);
+    } else if (activeTab === 'my' && spotifyId) {
+      unsubscribe = subscribeToUserScrobbles(spotifyId, 50, handleScrobblesUpdate);
+    } else if (activeTab === 'following' && spotifyId) {
+      unsubscribe = subscribeToFollowingScrobbles(spotifyId, 50, handleScrobblesUpdate);
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [activeTab, spotifyId]);
 
   // Check if currently playing track is liked
@@ -69,18 +89,9 @@ export function FeedPage() {
     checkNowPlayingLiked();
   }, [currentlyPlaying?.item?.id, spotifyId, scrobbles, likedScrobbleIds]);
 
-  const loadScrobbles = async () => {
+  // Handle real-time scrobbles updates
+  const handleScrobblesUpdate = useCallback(async (data: Scrobble[]) => {
     try {
-      let data: Scrobble[] = [];
-      
-      if (activeTab === 'all') {
-        data = await getRecentScrobbles(50);
-      } else if (activeTab === 'following' && spotifyId) {
-        data = await getFollowingScrobbles(spotifyId, 50);
-      } else if (activeTab === 'my' && spotifyId) {
-        data = await getUserScrobbles(spotifyId, 50);
-      }
-      
       setScrobbles(data);
 
       // Load user info for scrobbles
@@ -91,7 +102,7 @@ export function FeedPage() {
         if (user) map.set(user.odl, user);
       });
       setUsersMap(map);
-      
+
       // Check which scrobbles current user has liked
       if (spotifyId && data.length > 0) {
         const scrobbleIds = data.map(s => s.id);
@@ -99,11 +110,11 @@ export function FeedPage() {
         setLikedScrobbleIds(likedIds);
       }
     } catch (error) {
-      console.error('Error loading scrobbles:', error);
+      console.error('Error processing scrobbles:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [spotifyId]);
 
   const handleLike = useCallback(async (scrobble: Scrobble) => {
     if (!spotifyId) return;

@@ -4,7 +4,14 @@ import { updateCurrentTrack, addScrobble, getLastUserScrobble } from '../service
 import { SpotifyCurrentlyPlaying, Scrobble, SpotifyTrack } from '../types';
 import { useAuth } from './useAuth';
 
-const POLL_INTERVAL = 5000; // 5 seconds
+// Adaptive polling intervals
+const POLL_INTERVAL_PLAYING = 10000; // 10 seconds when music is playing
+const POLL_INTERVAL_PAUSED = 30000; // 30 seconds when paused/stopped
+const POLL_INTERVAL_ERROR = 60000; // 60 seconds after error
+
+// Exponential backoff settings
+const MAX_BACKOFF_TIME = 5 * 60 * 1000; // Max 5 minutes
+const BACKOFF_MULTIPLIER = 2;
 
 // Last.fm scrobbling rules:
 // - Track must be longer than 30 seconds
@@ -29,6 +36,10 @@ const globalState = {
   isScrobbling: false,
   initialized: false,
   lastScrobbleLoaded: false,
+  // Exponential backoff state
+  consecutiveErrors: 0,
+  backoffTime: 0,
+  lastErrorTime: 0,
 };
 
 // Reset global state on page load/refresh
@@ -61,9 +72,36 @@ export function useScrobbler(): UseScrobblerReturn {
   const [lastScrobble, setLastScrobble] = useState<Scrobble | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastScrobbleLoaded, setLastScrobbleLoaded] = useState(globalState.lastScrobbleLoaded);
-  
+  const [pollInterval, setPollInterval] = useState(POLL_INTERVAL_PLAYING);
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstCheck = useRef(true);
+
+  // Calculate adaptive poll interval based on playback state
+  const calculatePollInterval = useCallback((isPlaying: boolean, hasError: boolean): number => {
+    if (hasError) {
+      // Exponential backoff on errors
+      if (globalState.consecutiveErrors > 0) {
+        const backoff = Math.min(
+          POLL_INTERVAL_ERROR * Math.pow(BACKOFF_MULTIPLIER, globalState.consecutiveErrors - 1),
+          MAX_BACKOFF_TIME
+        );
+        console.log(`Backoff: ${backoff / 1000}s (${globalState.consecutiveErrors} errors)`);
+        return backoff;
+      }
+      return POLL_INTERVAL_ERROR;
+    }
+
+    // Reset backoff on success
+    if (globalState.consecutiveErrors > 0) {
+      globalState.consecutiveErrors = 0;
+      globalState.backoffTime = 0;
+      console.log('Backoff reset - connection restored');
+    }
+
+    // Adaptive polling based on playback state
+    return isPlaying ? POLL_INTERVAL_PLAYING : POLL_INTERVAL_PAUSED;
+  }, []);
 
   // Load last scrobble from Firebase on mount (prevents page reload duplicates)
   useEffect(() => {
@@ -264,16 +302,33 @@ export function useScrobbler(): UseScrobblerReturn {
       }
 
       setError(null);
+
+      // Update poll interval based on playback state
+      const newInterval = calculatePollInterval(isPlaying, false);
+      if (newInterval !== pollInterval) {
+        setPollInterval(newInterval);
+        console.log(`Poll interval: ${isPlaying ? 'playing' : 'paused'} (${newInterval / 1000}s)`);
+      }
     } catch (err) {
       console.error('Scrobbler error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
-      
+
+      // Track consecutive errors for exponential backoff
+      globalState.consecutiveErrors++;
+      globalState.lastErrorTime = Date.now();
+
+      // Update poll interval with exponential backoff
+      const newInterval = calculatePollInterval(false, true);
+      if (newInterval !== pollInterval) {
+        setPollInterval(newInterval);
+      }
+
       if (isFirstCheck.current) {
         isFirstCheck.current = false;
         setIsLoading(false);
       }
     }
-  }, [isAuthenticated, spotifyId, shouldScrobble, doScrobble, getScrobbleThreshold]);
+  }, [isAuthenticated, spotifyId, shouldScrobble, doScrobble, getScrobbleThreshold, calculatePollInterval, pollInterval]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -289,15 +344,16 @@ export function useScrobbler(): UseScrobblerReturn {
     // Reset state on mount
     isFirstCheck.current = true;
     setIsLoading(true);
-    
+
     // Initial check
     checkPlayback();
-    
-    // Start polling
+
+    // Start polling with adaptive interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    intervalRef.current = setInterval(checkPlayback, POLL_INTERVAL);
+    intervalRef.current = setInterval(checkPlayback, pollInterval);
+    console.log(`Polling started: ${pollInterval / 1000}s interval`);
 
     return () => {
       if (intervalRef.current) {
@@ -305,7 +361,7 @@ export function useScrobbler(): UseScrobblerReturn {
         intervalRef.current = null;
       }
     };
-  }, [isAuthenticated, checkPlayback, lastScrobbleLoaded]);
+  }, [isAuthenticated, checkPlayback, lastScrobbleLoaded, pollInterval]);
 
   return {
     currentlyPlaying,

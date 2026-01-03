@@ -167,16 +167,35 @@ export async function getCurrentUser(): Promise<{ id: string; display_name: stri
 export async function getCurrentlyPlaying(): Promise<SpotifyCurrentlyPlaying | null> {
   const token = await getValidAccessToken();
   if (!token) return null;
-  
+
   const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
     headers: { Authorization: `Bearer ${token}` },
   });
-  
+
   if (response.status === 204) {
     return { is_playing: false, item: null, progress_ms: 0 };
   }
-  
-  if (!response.ok) return null;
+
+  // Handle rate limiting (429 Too Many Requests)
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After');
+    const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000; // Default 60s
+    console.warn(`Spotify API rate limited. Retry after ${waitTime / 1000}s`);
+    throw new Error(`RATE_LIMITED:${waitTime}`);
+  }
+
+  // Handle other errors
+  if (response.status === 401) {
+    // Token expired, will be refreshed by getValidAccessToken
+    console.log('Token expired, refreshing...');
+    return null;
+  }
+
+  if (!response.ok) {
+    console.error(`Spotify API error: ${response.status} ${response.statusText}`);
+    return null;
+  }
+
   return response.json();
 }
 
