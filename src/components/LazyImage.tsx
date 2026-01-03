@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 
 interface LazyImageProps {
   src: string;
@@ -8,48 +8,26 @@ interface LazyImageProps {
 }
 
 /**
- * Lazy-loaded image component with Intersection Observer
- * Only loads images when they're about to enter the viewport
+ * Lazy-loaded image component
+ * Uses native browser lazy loading for better performance
  */
 export function LazyImage({ src, alt, className, placeholder }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    if (!imgRef.current) return;
-
-    // Use Intersection Observer for lazy loading
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsInView(true);
-            observer.disconnect();
-          }
-        });
-      },
-      {
-        rootMargin: '50px', // Start loading 50px before image enters viewport
-      }
-    );
-
-    observer.observe(imgRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
+  const [hasError, setHasError] = useState(false);
 
   return (
     <>
-      {!isLoaded && placeholder}
+      {!isLoaded && !hasError && placeholder}
       <img
-        ref={imgRef}
-        src={isInView ? src : undefined}
+        src={src}
         alt={alt}
         className={className}
+        loading="lazy"
         onLoad={() => setIsLoaded(true)}
+        onError={() => {
+          setHasError(true);
+          setIsLoaded(true);
+        }}
         style={{ display: isLoaded ? 'block' : 'none' }}
       />
     </>
