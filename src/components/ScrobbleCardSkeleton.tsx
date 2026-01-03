@@ -1,5 +1,4 @@
 import { Skeleton } from '@gravity-ui/uikit';
-import './ScrobbleCard.css';
 
 export function ScrobbleCardSkeleton() {
   return (

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, Loader } from '@gravity-ui/uikit';
 import { ToasterComponent, ToasterProvider } from '@gravity-ui/uikit';
+import { toaster } from '@gravity-ui/uikit/toaster-singleton';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeContextProvider, useTheme } from './hooks/useTheme';
 import { I18nProvider } from './hooks/useI18n';
@@ -126,7 +127,7 @@ function ThemedApp() {
 
   return (
     <ThemeProvider theme={theme}>
-      <ToasterProvider>
+      <ToasterProvider toaster={toaster}>
         <ToasterComponent />
         <BrowserRouter>
           <AuthProvider>

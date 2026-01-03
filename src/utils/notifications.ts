@@ -8,7 +8,7 @@ export function showSuccess(message: string): void {
     name: 'success-toast',
     title: message,
     theme: 'success',
-    isCloseable: true,
+    isClosable: true,
     autoHiding: 4000,
   });
 }
@@ -21,7 +21,7 @@ export function showError(message: string): void {
     name: 'error-toast',
     title: message,
     theme: 'danger',
-    isCloseable: true,
+    isClosable: true,
     autoHiding: 5000,
   });
 }
@@ -34,7 +34,7 @@ export function showInfo(message: string): void {
     name: 'info-toast',
     title: message,
     theme: 'info',
-    isCloseable: true,
+    isClosable: true,
     autoHiding: 4000,
   });
 }
@@ -47,7 +47,7 @@ export function showWarning(message: string): void {
     name: 'warning-toast',
     title: message,
     theme: 'warning',
-    isCloseable: true,
+    isClosable: true,
     autoHiding: 4000,
   });
 }
@@ -74,7 +74,7 @@ export async function withToast<T>(
         name: loadingToastName,
         title: loading,
         theme: 'info',
-        isCloseable: false,
+        isClosable: false,
         autoHiding: false,
       });
     }
