@@ -393,7 +393,7 @@ export async function getTrackInfo(trackId: string): Promise<SpotifyTrack | null
 }
 
 /**
- * Get album information from Spotify (genres, release date, etc.)
+ * Get album information from Spotify (genres from artist, release date, etc.)
  */
 export async function getAlbumInfo(albumId: string): Promise<SpotifyAlbumInfo | null> {
   const token = await getValidAccessToken();
@@ -406,10 +406,47 @@ export async function getAlbumInfo(albumId: string): Promise<SpotifyAlbumInfo | 
     );
 
     if (!response.ok) return null;
-    return response.json();
+    const albumData = await response.json();
+
+    // Spotify albums don't have genres, but artists do
+    // Fetch genres from the primary artist
+    let genres: string[] = [];
+    if (albumData.artists?.[0]?.id) {
+      const artistData = await getArtistById(albumData.artists[0].id);
+      if (artistData?.genres) {
+        genres = artistData.genres;
+      }
+    }
+
+    return {
+      ...albumData,
+      genres
+    };
   } catch (error) {
     console.error('Error fetching album info:', error);
     return null;
+  }
+}
+
+/**
+ * Get album tracks from Spotify
+ */
+export async function getAlbumTracks(albumId: string): Promise<SpotifyTrack[]> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=50`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.items || [];
+  } catch (error) {
+    console.error('Error fetching album tracks:', error);
+    return [];
   }
 }
 

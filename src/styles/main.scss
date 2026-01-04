@@ -1810,7 +1810,7 @@ body {
     max-height: 100vh !important;
     max-height: 100dvh !important;
   }
-  
+
   .g-dialog__content {
     max-width: 100% !important;
     width: 100% !important;
@@ -1818,14 +1818,40 @@ body {
     max-height: calc(100vh - 32px) !important;
     max-height: calc(100dvh - 32px) !important;
   }
-  
+
   .artist-dialog .g-dialog__content,
-  .match-dialog .g-dialog__content {
+  .match-dialog .g-dialog__content,
+  .album-dialog .g-dialog__content {
     width: calc(100% - 32px) !important;
   }
-  
+
   .match-dialog-grid {
     grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  // Album dialog mobile layout
+  .album-dialog .g-dialog__body > div {
+    flex-direction: column !important;
+    gap: var(--spacing-4) !important;
+
+    // Album cover on mobile
+    > div:first-child {
+      width: 100% !important;
+
+      img {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 280px !important;
+        margin: 0 auto !important;
+        display: block !important;
+      }
+    }
+  }
+
+  // Followers/Following dialogs
+  .g-dialog[class*="followers"] .g-dialog__content,
+  .g-dialog[class*="following"] .g-dialog__content {
+    width: calc(100% - 32px) !important;
   }
 }
 

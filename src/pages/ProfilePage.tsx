@@ -17,7 +17,7 @@ import {
   unlikeScrobble,
   checkLikedScrobbles
 } from '../services/firebase';
-import { getArtistsByIds, getArtistImages, getAlbumInfo, getTrackInfo, SpotifyAlbumInfo } from '../services/spotify';
+import { getArtistsByIds, getArtistImages, getAlbumInfo, getTrackInfo, getAlbumTracks, SpotifyAlbumInfo } from '../services/spotify';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -515,29 +515,39 @@ export function ProfilePage() {
     setAlbumInfo(null);
     setIsAlbumInfoLoading(true);
 
-    // Get tracks from this album
-    const seenTitles = new Set<string>();
-    const tracks = allScrobbles
-      .filter(s => {
-        if (s.album !== album.name) return false;
-        if (normalizeArtistName(s.artist) !== normalizeArtistName(album.artist)) return false;
-        if (seenTitles.has(s.title)) return false;
-        seenTitles.add(s.title);
-        return true;
-      })
-      .slice(0, 20); // Show up to 20 tracks
-
-    setAlbumTracks(tracks);
-
-    // Try to get album info from Spotify
     // Find a track with trackId to get album ID
-    const trackWithId = tracks.find(t => t.trackId);
+    const trackWithId = allScrobbles.find(s =>
+      s.album === album.name &&
+      normalizeArtistName(s.artist) === normalizeArtistName(album.artist) &&
+      s.trackId
+    );
+
     if (trackWithId?.trackId) {
       try {
         const trackInfo = await getTrackInfo(trackWithId.trackId);
         if (trackInfo?.album?.id) {
-          const albumInfoData = await getAlbumInfo(trackInfo.album.id);
+          // Load album info AND tracks from Spotify
+          const [albumInfoData, spotifyTracks] = await Promise.all([
+            getAlbumInfo(trackInfo.album.id),
+            getAlbumTracks(trackInfo.album.id)
+          ]);
+
           setAlbumInfo(albumInfoData);
+
+          // Convert Spotify tracks to Scrobble format for display
+          const tracksForDisplay = spotifyTracks.map(track => ({
+            id: track.id,
+            odl: '',
+            trackId: track.id,
+            title: track.name,
+            artist: track.artists.map(a => a.name).join(', '),
+            album: album.name,
+            albumArtURL: album.imageUrl,
+            timestamp: new Date(),
+            duration: track.duration_ms
+          } as Scrobble));
+
+          setAlbumTracks(tracksForDisplay);
         }
       } catch (error) {
         console.error('Error loading album info:', error);
@@ -935,9 +945,6 @@ export function ProfilePage() {
         hasCloseButton={false}
         className="album-dialog"
       >
-        <Dialog.Header
-          caption={selectedAlbum ? `${selectedAlbum.name}` : ''}
-        />
         <Dialog.Body>
           {isAlbumInfoLoading ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
