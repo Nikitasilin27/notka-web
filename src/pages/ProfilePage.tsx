@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup, Label } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
-import { PersonPlus, PersonXmark, Magnifier, ChevronLeft } from '@gravity-ui/icons';
+import { PersonPlus, PersonXmark, Magnifier, ChevronLeft, HeartFill } from '@gravity-ui/icons';
 import {
   getUser,
   getUserScrobbles,
@@ -17,7 +17,7 @@ import {
   unlikeScrobble,
   checkLikedScrobbles
 } from '../services/firebase';
-import { getArtistsByIds, getArtistImages, getAlbumInfo, getTrackInfo, getAlbumTracks, SpotifyAlbumInfo } from '../services/spotify';
+import { getArtistsByIds, getArtistImages, getAlbumInfo, getTrackInfo, getAlbumTracks, SpotifyAlbumInfo, checkTracksLiked } from '../services/spotify';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -85,6 +85,7 @@ export function ProfilePage() {
   const [artistTracks, setArtistTracks] = useState<Scrobble[]>([]);
   const [isArtistInfoLoading, setIsArtistInfoLoading] = useState(false);
   const [openedFromMatchDialog, setOpenedFromMatchDialog] = useState(false);
+  const [openedFromAlbumDialog, setOpenedFromAlbumDialog] = useState(false);
   
   const [musicMatch, setMusicMatch] = useState<MusicMatch | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
@@ -107,6 +108,7 @@ export function ProfilePage() {
   const [albumTracks, setAlbumTracks] = useState<Scrobble[]>([]);
   const [albumInfo, setAlbumInfo] = useState<SpotifyAlbumInfo | null>(null);
   const [isAlbumInfoLoading, setIsAlbumInfoLoading] = useState(false);
+  const [albumTracksSpotifyLiked, setAlbumTracksSpotifyLiked] = useState<Map<string, boolean>>(new Map());
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -334,7 +336,7 @@ export function ProfilePage() {
   };
 
   const calculateMusicMatch = (
-    myScrobbles: Scrobble[], 
+    myScrobbles: Scrobble[],
     theirScrobbles: Scrobble[],
     theirTopArtists: TopArtist[]
   ): MusicMatch => {
@@ -345,33 +347,43 @@ export function ProfilePage() {
       myArtists.add(name);
       myArtistCounts.set(name, (myArtistCounts.get(name) || 0) + 1);
     });
-    
+
     const theirArtists = new Set<string>();
-    theirScrobbles.forEach(s => theirArtists.add(normalizeArtistName(s.artist)));
-    
+    const theirArtistImages = new Map<string, string>();
+    theirScrobbles.forEach(s => {
+      const name = normalizeArtistName(s.artist);
+      theirArtists.add(name);
+      // Store first album art as fallback image for artist
+      if (!theirArtistImages.has(name) && s.albumArtURL) {
+        theirArtistImages.set(name, s.albumArtURL);
+      }
+    });
+
     const commonArtistNames = [...myArtists].filter(a => theirArtists.has(a));
-    
+
     const commonArtists: TopArtist[] = commonArtistNames
       .map(name => {
         const fromTop = theirTopArtists.find(a => a.name === name);
-        return { name, count: myArtistCounts.get(name) || 0, imageUrl: fromTop?.imageUrl };
+        // Use image from topArtists first, fallback to album art from scrobbles
+        const imageUrl = fromTop?.imageUrl || theirArtistImages.get(name);
+        return { name, count: myArtistCounts.get(name) || 0, imageUrl };
       })
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-    
+
     const recommendations: TopArtist[] = theirTopArtists
       .filter(a => !myArtists.has(a.name))
       .slice(0, 6);
-    
+
     const totalUnique = new Set([...myArtists, ...theirArtists]).size;
     const percentage = totalUnique > 0 ? Math.round((commonArtistNames.length / totalUnique) * 100) : 0;
-    
+
     let level: 'low' | 'medium' | 'high' | 'super';
     if (percentage >= 50) level = 'super';
     else if (percentage >= 30) level = 'high';
     else if (percentage >= 15) level = 'medium';
     else level = 'low';
-    
+
     return { percentage, level, commonArtists, recommendations };
   };
 
@@ -513,6 +525,7 @@ export function ProfilePage() {
     setSelectedAlbum(album);
     setAlbumTracks([]);
     setAlbumInfo(null);
+    setAlbumTracksSpotifyLiked(new Map());
     setIsAlbumInfoLoading(true);
 
     // Find a track with trackId to get album ID
@@ -548,6 +561,22 @@ export function ProfilePage() {
           } as Scrobble));
 
           setAlbumTracks(tracksForDisplay);
+
+          // Load Spotify liked status for tracks (only for own profile)
+          if (isOwnProfile && spotifyId) {
+            const trackIds = spotifyTracks.map(t => t.id).filter(Boolean);
+            if (trackIds.length > 0) {
+              const spotifyLikedMap = await checkTracksLiked(trackIds);
+              setAlbumTracksSpotifyLiked(spotifyLikedMap);
+            }
+          }
+
+          // Load internal likes for tracks (check if user liked them in our app)
+          if (spotifyId) {
+            const scrobbleIds = tracksForDisplay.map(t => t.id);
+            const internalLikedIds = await checkLikedScrobbles(spotifyId, scrobbleIds);
+            setLikedScrobbleIds(prev => new Set([...prev, ...internalLikedIds]));
+          }
         }
       } catch (error) {
         console.error('Error loading album info:', error);
@@ -567,14 +596,52 @@ export function ProfilePage() {
     setArtistInfo(null);
     setArtistTracks([]);
     setOpenedFromMatchDialog(false);
+    setOpenedFromAlbumDialog(false);
   };
-  
+
   const handleBackToMatch = () => {
     setSelectedArtist(null);
     setArtistInfo(null);
     setArtistTracks([]);
     setOpenedFromMatchDialog(false);
     setIsMatchDialogOpen(true);
+  };
+
+  const handleBackToAlbum = () => {
+    setSelectedArtist(null);
+    setArtistInfo(null);
+    setArtistTracks([]);
+    setOpenedFromAlbumDialog(false);
+  };
+
+  const handleArtistClickFromAlbum = async (artistName: string) => {
+    // Close album dialog and open artist dialog
+    const artist: TopArtist = {
+      name: artistName,
+      count: 0,
+      imageUrl: albumInfo?.images?.[0]?.url
+    };
+
+    setOpenedFromAlbumDialog(true);
+    setSelectedArtist(artist);
+    setArtistInfo(null);
+    setArtistTracks([]);
+    setIsArtistInfoLoading(true);
+
+    const info = await getArtistWikipediaInfo(artistName, lang);
+    setArtistInfo(info);
+
+    const seenTitles = new Set<string>();
+    const tracks = allScrobbles
+      .filter(s => {
+        if (normalizeArtistName(s.artist) !== artistName) return false;
+        if (seenTitles.has(s.title)) return false;
+        seenTitles.add(s.title);
+        return true;
+      })
+      .slice(0, 5);
+    setArtistTracks(tracks);
+    setIsArtistInfoLoading(false);
   };
 
   const openWikipedia = () => {
@@ -922,6 +989,11 @@ export function ProfilePage() {
                   <Icon data={ChevronLeft} size={16} />
                 </Button>
               )}
+              {openedFromAlbumDialog && (
+                <Button view="flat" size="m" onClick={handleBackToAlbum}>
+                  <Icon data={ChevronLeft} size={16} />
+                </Button>
+              )}
               <div className="artist-dialog-footer-right">
                 <Button view="flat" size="m" onClick={closeArtistDialog}>
                   {lang === 'ru' ? 'Закрыть' : 'Close'}
@@ -945,6 +1017,7 @@ export function ProfilePage() {
         hasCloseButton={false}
         className="album-dialog"
       >
+        <Dialog.Header caption="" />
         <Dialog.Body>
           {isAlbumInfoLoading ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -973,7 +1046,18 @@ export function ProfilePage() {
                 <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 600 }}>
                   {selectedAlbum?.name}
                 </h3>
-                <div style={{ fontSize: '16px', color: '#888', marginBottom: '16px' }}>
+                <div
+                  style={{
+                    fontSize: '16px',
+                    color: '#888',
+                    marginBottom: '16px',
+                    cursor: 'pointer',
+                    transition: 'color 0.2s'
+                  }}
+                  onClick={() => selectedAlbum && handleArtistClickFromAlbum(selectedAlbum.artist)}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--notka-brand)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
+                >
                   {selectedAlbum?.artist}
                 </div>
 
@@ -1024,48 +1108,66 @@ export function ProfilePage() {
                       {lang === 'ru' ? 'Список треков' : 'Track List'}
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
-                      {albumTracks.map((track, idx) => (
-                        <div
-                          key={`${track.id}-${idx}`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '8px',
-                            borderRadius: '4px',
-                            background: 'rgba(255,255,255,0.02)',
-                            transition: 'background 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                        >
-                          {track.albumArtURL && (
-                            <img
-                              src={track.albumArtURL}
-                              alt=""
-                              style={{
-                                width: '40px',
-                                height: '40px',
-                                borderRadius: '4px',
-                                objectFit: 'cover'
-                              }}
-                            />
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {track.title}
+                      {albumTracks.map((track, idx) => {
+                        const isLikedInApp = likedScrobbleIds.has(track.id);
+                        const isLikedOnSpotify = isOwnProfile && albumTracksSpotifyLiked.get(track.trackId || '');
+
+                        return (
+                          <div
+                            key={`${track.id}-${idx}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '8px',
+                              borderRadius: '4px',
+                              background: 'rgba(255,255,255,0.02)',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                          >
+                            {track.albumArtURL && (
+                              <img
+                                src={track.albumArtURL}
+                                alt=""
+                                style={{
+                                  width: '40px',
+                                  height: '40px',
+                                  borderRadius: '4px',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {track.title}
+                                {isLikedOnSpotify && (
+                                  <Label theme="success" size="xs">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                      <Icon data={HeartFill} size={10} />
+                                      Spotify
+                                    </div>
+                                  </Label>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {track.artist}
+                              </div>
                             </div>
-                            <div style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {track.artist}
-                            </div>
+                            {isLikedInApp && (
+                              <div style={{ color: '#ff4d6a', flexShrink: 0 }}>
+                                <Icon data={HeartFill} size={16} />
+                              </div>
+                            )}
+                            {track.duration && (
+                              <div style={{ fontSize: '12px', color: '#888', flexShrink: 0 }}>
+                                {Math.floor(track.duration / 60000)}:{String(Math.floor((track.duration % 60000) / 1000)).padStart(2, '0')}
+                              </div>
+                            )}
                           </div>
-                          {track.duration && (
-                            <div style={{ fontSize: '12px', color: '#888', flexShrink: 0 }}>
-                              {Math.floor(track.duration / 60000)}:{String(Math.floor((track.duration % 60000) / 1000)).padStart(2, '0')}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
