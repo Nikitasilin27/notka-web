@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup } from '@gravity-ui/uikit';
+import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup, Label } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { PersonPlus, PersonXmark, Magnifier, ChevronLeft } from '@gravity-ui/icons';
 import {
@@ -17,7 +17,7 @@ import {
   unlikeScrobble,
   checkLikedScrobbles
 } from '../services/firebase';
-import { getArtistsByIds, getArtistImages } from '../services/spotify';
+import { getArtistsByIds, getArtistImages, getAlbumInfo, getTrackInfo, SpotifyAlbumInfo } from '../services/spotify';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -105,6 +105,7 @@ export function ProfilePage() {
   // Album dialog
   const [selectedAlbum, setSelectedAlbum] = useState<TopAlbum | null>(null);
   const [albumTracks, setAlbumTracks] = useState<Scrobble[]>([]);
+  const [albumInfo, setAlbumInfo] = useState<SpotifyAlbumInfo | null>(null);
   const [isAlbumInfoLoading, setIsAlbumInfoLoading] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
@@ -511,6 +512,7 @@ export function ProfilePage() {
   const handleAlbumClick = async (album: TopAlbum) => {
     setSelectedAlbum(album);
     setAlbumTracks([]);
+    setAlbumInfo(null);
     setIsAlbumInfoLoading(true);
 
     // Get tracks from this album
@@ -526,6 +528,22 @@ export function ProfilePage() {
       .slice(0, 20); // Show up to 20 tracks
 
     setAlbumTracks(tracks);
+
+    // Try to get album info from Spotify
+    // Find a track with trackId to get album ID
+    const trackWithId = tracks.find(t => t.trackId);
+    if (trackWithId?.trackId) {
+      try {
+        const trackInfo = await getTrackInfo(trackWithId.trackId);
+        if (trackInfo?.album?.id) {
+          const albumInfoData = await getAlbumInfo(trackInfo.album.id);
+          setAlbumInfo(albumInfoData);
+        }
+      } catch (error) {
+        console.error('Error loading album info:', error);
+      }
+    }
+
     setIsAlbumInfoLoading(false);
   };
 
@@ -953,7 +971,7 @@ export function ProfilePage() {
                 </div>
 
                 {/* Stats */}
-                <div style={{ display: 'flex', gap: '24px', marginBottom: '20px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', gap: '24px', marginBottom: '16px', fontSize: '14px' }}>
                   <div>
                     <span style={{ color: '#888' }}>
                       {lang === 'ru' ? 'Прослушиваний' : 'Plays'}:
@@ -966,7 +984,31 @@ export function ProfilePage() {
                     </span>{' '}
                     <strong>{albumTracks.length}</strong>
                   </div>
+                  {albumInfo?.release_date && (
+                    <div>
+                      <span style={{ color: '#888' }}>
+                        {lang === 'ru' ? 'Релиз' : 'Release'}:
+                      </span>{' '}
+                      <strong>{new Date(albumInfo.release_date).getFullYear()}</strong>
+                    </div>
+                  )}
                 </div>
+
+                {/* Genres */}
+                {albumInfo?.genres && albumInfo.genres.length > 0 && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '14px', color: '#888', marginBottom: '8px' }}>
+                      {lang === 'ru' ? 'Жанры' : 'Genres'}:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {albumInfo.genres.slice(0, 5).map((genre, idx) => (
+                        <Label key={idx} theme="normal" size="m">
+                          {genre}
+                        </Label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Tracks List */}
                 {albumTracks.length > 0 && (

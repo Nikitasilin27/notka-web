@@ -356,6 +356,64 @@ export async function getArtistsByIds(artistIds: string[]): Promise<Map<string, 
 }
 
 // ============================================
+// SPOTIFY ALBUM INFO
+// ============================================
+
+export interface SpotifyAlbumInfo {
+  id: string;
+  name: string;
+  artists: { id: string; name: string }[];
+  release_date: string;
+  release_date_precision: string;
+  genres: string[];
+  label: string;
+  total_tracks: number;
+  images: { url: string; width: number; height: number }[];
+}
+
+/**
+ * Get track information to extract album ID
+ */
+export async function getTrackInfo(trackId: string): Promise<SpotifyTrack | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/tracks/${trackId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching track info:', error);
+    return null;
+  }
+}
+
+/**
+ * Get album information from Spotify (genres, release date, etc.)
+ */
+export async function getAlbumInfo(albumId: string): Promise<SpotifyAlbumInfo | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/albums/${albumId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching album info:', error);
+    return null;
+  }
+}
+
+// ============================================
 // SPOTIFY LIKED TRACKS
 // ============================================
 
