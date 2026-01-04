@@ -102,6 +102,11 @@ export function ProfilePage() {
   const [followingList, setFollowingList] = useState<User[]>([]);
   const [isFollowListLoading, setIsFollowListLoading] = useState(false);
 
+  // Album dialog
+  const [selectedAlbum, setSelectedAlbum] = useState<TopAlbum | null>(null);
+  const [albumTracks, setAlbumTracks] = useState<Scrobble[]>([]);
+  const [isAlbumInfoLoading, setIsAlbumInfoLoading] = useState(false);
+
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
   
@@ -486,10 +491,10 @@ export function ProfilePage() {
     setArtistInfo(null);
     setArtistTracks([]);
     setIsArtistInfoLoading(true);
-    
+
     const info = await getArtistWikipediaInfo(artist.name, lang);
     setArtistInfo(info);
-    
+
     const seenTitles = new Set<string>();
     const tracks = allScrobbles
       .filter(s => {
@@ -501,6 +506,32 @@ export function ProfilePage() {
       .slice(0, 5);
     setArtistTracks(tracks);
     setIsArtistInfoLoading(false);
+  };
+
+  const handleAlbumClick = async (album: TopAlbum) => {
+    setSelectedAlbum(album);
+    setAlbumTracks([]);
+    setIsAlbumInfoLoading(true);
+
+    // Get tracks from this album
+    const seenTitles = new Set<string>();
+    const tracks = allScrobbles
+      .filter(s => {
+        if (s.album !== album.name) return false;
+        if (normalizeArtistName(s.artist) !== normalizeArtistName(album.artist)) return false;
+        if (seenTitles.has(s.title)) return false;
+        seenTitles.add(s.title);
+        return true;
+      })
+      .slice(0, 20); // Show up to 20 tracks
+
+    setAlbumTracks(tracks);
+    setIsAlbumInfoLoading(false);
+  };
+
+  const closeAlbumDialog = () => {
+    setSelectedAlbum(null);
+    setAlbumTracks([]);
   };
 
   const closeArtistDialog = () => {
@@ -794,7 +825,7 @@ export function ProfilePage() {
               <h3 className="top-artists-title">{lang === 'ru' ? 'Топ альбомы' : 'Top Albums'}</h3>
               <div className="top-artists-grid">
                 {topAlbums.map((album) => (
-                  <div key={`${album.name}-${album.artist}`} className="top-artist-tile">
+                  <div key={`${album.name}-${album.artist}`} className="top-artist-tile" onClick={() => handleAlbumClick(album)} style={{ cursor: 'pointer' }}>
                     {album.imageUrl ? (
                       <img src={album.imageUrl} alt={album.name} className="top-artist-tile-image" />
                     ) : (
@@ -875,6 +906,127 @@ export function ProfilePage() {
               </div>
             </div>
           )}
+        />
+      </Dialog>
+
+      {/* Album Info Dialog */}
+      <Dialog
+        open={!!selectedAlbum}
+        onClose={closeAlbumDialog}
+        size="l"
+        hasCloseButton={false}
+        className="album-dialog"
+      >
+        <Dialog.Header
+          caption={selectedAlbum ? `${selectedAlbum.name}` : ''}
+        />
+        <Dialog.Body>
+          {isAlbumInfoLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <Loader size="m" />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '24px' }}>
+              {/* Album Cover - Left */}
+              {selectedAlbum?.imageUrl && (
+                <div style={{ flexShrink: 0 }}>
+                  <img
+                    src={selectedAlbum.imageUrl}
+                    alt={selectedAlbum.name}
+                    style={{
+                      width: '230px',
+                      height: '230px',
+                      borderRadius: '8px',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Album Info - Right */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 600 }}>
+                  {selectedAlbum?.name}
+                </h3>
+                <div style={{ fontSize: '16px', color: '#888', marginBottom: '16px' }}>
+                  {selectedAlbum?.artist}
+                </div>
+
+                {/* Stats */}
+                <div style={{ display: 'flex', gap: '24px', marginBottom: '20px', fontSize: '14px' }}>
+                  <div>
+                    <span style={{ color: '#888' }}>
+                      {lang === 'ru' ? 'Прослушиваний' : 'Plays'}:
+                    </span>{' '}
+                    <strong>{selectedAlbum?.count}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#888' }}>
+                      {lang === 'ru' ? 'Треков' : 'Tracks'}:
+                    </span>{' '}
+                    <strong>{albumTracks.length}</strong>
+                  </div>
+                </div>
+
+                {/* Tracks List */}
+                {albumTracks.length > 0 && (
+                  <div>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 600 }}>
+                      {lang === 'ru' ? 'Список треков' : 'Track List'}
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+                      {albumTracks.map((track, idx) => (
+                        <div
+                          key={`${track.id}-${idx}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '8px',
+                            borderRadius: '4px',
+                            background: 'rgba(255,255,255,0.02)',
+                            transition: 'background 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                        >
+                          {track.albumArtURL && (
+                            <img
+                              src={track.albumArtURL}
+                              alt=""
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '4px',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {track.title}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {track.artist}
+                            </div>
+                          </div>
+                          {track.duration && (
+                            <div style={{ fontSize: '12px', color: '#888', flexShrink: 0 }}>
+                              {Math.floor(track.duration / 60000)}:{String(Math.floor((track.duration % 60000) / 1000)).padStart(2, '0')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </Dialog.Body>
+        <Dialog.Footer
+          onClickButtonCancel={closeAlbumDialog}
+          textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
         />
       </Dialog>
 
