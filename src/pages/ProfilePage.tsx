@@ -3,13 +3,15 @@ import { useParams } from 'react-router-dom';
 import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { PersonPlus, PersonXmark, Magnifier, ChevronLeft } from '@gravity-ui/icons';
-import { 
-  getUser, 
-  getUserScrobbles, 
-  isFollowing, 
-  followUser, 
+import {
+  getUser,
+  getUserScrobbles,
+  isFollowing,
+  followUser,
   unfollowUser,
   getFollowCounts,
+  getFollowers,
+  getFollowing,
   getUserLikes,
   likeScrobble,
   unlikeScrobble,
@@ -92,6 +94,13 @@ export function ProfilePage() {
   const [likedScrobbles, setLikedScrobbles] = useState<Scrobble[]>([]);
   const [isLikedLoading, setIsLikedLoading] = useState(false);
   const [likedScrobbleIds, setLikedScrobbleIds] = useState<Set<string>>(new Set());
+
+  // Followers/Following dialogs
+  const [isFollowersDialogOpen, setIsFollowersDialogOpen] = useState(false);
+  const [isFollowingDialogOpen, setIsFollowingDialogOpen] = useState(false);
+  const [followersList, setFollowersList] = useState<User[]>([]);
+  const [followingList, setFollowingList] = useState<User[]>([]);
+  const [isFollowListLoading, setIsFollowListLoading] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -394,6 +403,44 @@ export function ProfilePage() {
     }
   };
 
+  // Load followers list
+  const handleOpenFollowers = async () => {
+    if (!targetOdl) return;
+    setIsFollowersDialogOpen(true);
+    setIsFollowListLoading(true);
+
+    try {
+      const followerIds = await getFollowers(targetOdl);
+      const followers = await Promise.all(
+        followerIds.map(id => getUser(id))
+      );
+      setFollowersList(followers.filter(u => u !== null) as User[]);
+    } catch (error) {
+      console.error('Error loading followers:', error);
+    } finally {
+      setIsFollowListLoading(false);
+    }
+  };
+
+  // Load following list
+  const handleOpenFollowing = async () => {
+    if (!targetOdl) return;
+    setIsFollowingDialogOpen(true);
+    setIsFollowListLoading(true);
+
+    try {
+      const followingIds = await getFollowing(targetOdl);
+      const following = await Promise.all(
+        followingIds.map(id => getUser(id))
+      );
+      setFollowingList(following.filter(u => u !== null) as User[]);
+    } catch (error) {
+      console.error('Error loading following:', error);
+    } finally {
+      setIsFollowListLoading(false);
+    }
+  };
+
   // Load liked scrobble IDs when scrobbles change
   useEffect(() => {
     const loadLikedIds = async () => {
@@ -581,11 +628,11 @@ export function ProfilePage() {
                 <div className="profile-hero-stat-value">{stats.scrobbles}</div>
                 <div className="profile-hero-stat-label">{t.scrobbles}</div>
               </div>
-              <div className="profile-hero-stat">
+              <div className="profile-hero-stat" onClick={handleOpenFollowers} style={{ cursor: 'pointer' }}>
                 <div className="profile-hero-stat-value">{followCounts.followers}</div>
                 <div className="profile-hero-stat-label">{t.followers}</div>
               </div>
-              <div className="profile-hero-stat">
+              <div className="profile-hero-stat" onClick={handleOpenFollowing} style={{ cursor: 'pointer' }}>
                 <div className="profile-hero-stat-value">{followCounts.following}</div>
                 <div className="profile-hero-stat-label">{t.followingCount}</div>
               </div>
@@ -882,6 +929,126 @@ export function ProfilePage() {
           )}
         </Dialog.Body>
         <Dialog.Footer onClickButtonCancel={() => setIsMatchDialogOpen(false)} textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'} />
+      </Dialog>
+
+      {/* Followers Dialog */}
+      <Dialog
+        open={isFollowersDialogOpen}
+        onClose={() => setIsFollowersDialogOpen(false)}
+        size="s"
+        hasCloseButton={false}
+      >
+        <Dialog.Header caption={lang === 'ru' ? 'Подписчики' : 'Followers'} />
+        <Dialog.Body>
+          {isFollowListLoading ? (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Loader size="m" />
+            </div>
+          ) : followersList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
+              {lang === 'ru' ? 'Нет подписчиков' : 'No followers'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {followersList.map(follower => (
+                <a
+                  key={follower.odl}
+                  href={`/profile/${follower.odl}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <Avatar
+                    imgUrl={follower.avatarURL}
+                    size="m"
+                    text={follower.name[0]}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500 }}>{follower.name}</div>
+                    {follower.currentTrack && (
+                      <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                        {follower.currentTrack.trackName}
+                      </div>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </Dialog.Body>
+        <Dialog.Footer
+          onClickButtonCancel={() => setIsFollowersDialogOpen(false)}
+          textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
+        />
+      </Dialog>
+
+      {/* Following Dialog */}
+      <Dialog
+        open={isFollowingDialogOpen}
+        onClose={() => setIsFollowingDialogOpen(false)}
+        size="s"
+        hasCloseButton={false}
+      >
+        <Dialog.Header caption={lang === 'ru' ? 'Подписки' : 'Following'} />
+        <Dialog.Body>
+          {isFollowListLoading ? (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Loader size="m" />
+            </div>
+          ) : followingList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
+              {lang === 'ru' ? 'Нет подписок' : 'Not following anyone'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {followingList.map(following => (
+                <a
+                  key={following.odl}
+                  href={`/profile/${following.odl}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <Avatar
+                    imgUrl={following.avatarURL}
+                    size="m"
+                    text={following.name[0]}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500 }}>{following.name}</div>
+                    {following.currentTrack && (
+                      <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                        {following.currentTrack.trackName}
+                      </div>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </Dialog.Body>
+        <Dialog.Footer
+          onClickButtonCancel={() => setIsFollowingDialogOpen(false)}
+          textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
+        />
       </Dialog>
     </div>
   );
