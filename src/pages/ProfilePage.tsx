@@ -25,6 +25,13 @@ import { useI18n, formatTimeI18n } from '../hooks/useI18n';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 
+// Custom Spotify icon SVG - centered with brand color
+const SpotifyIcon = () => (
+  <svg viewBox="0 0 24 24" width="12" height="12" fill="#1DB954">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+  </svg>
+);
+
 interface TopArtist {
   name: string;
   artistId?: string;  // Spotify Artist ID for accurate image
@@ -108,7 +115,6 @@ export function ProfilePage() {
   const [albumTracks, setAlbumTracks] = useState<Scrobble[]>([]);
   const [albumInfo, setAlbumInfo] = useState<SpotifyAlbumInfo | null>(null);
   const [isAlbumInfoLoading, setIsAlbumInfoLoading] = useState(false);
-  const [albumTracksSpotifyLiked, setAlbumTracksSpotifyLiked] = useState<Map<string, boolean>>(new Map());
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -525,7 +531,6 @@ export function ProfilePage() {
     setSelectedAlbum(album);
     setAlbumTracks([]);
     setAlbumInfo(null);
-    setAlbumTracksSpotifyLiked(new Map());
     setIsAlbumInfoLoading(true);
 
     // Find a track with trackId to get album ID
@@ -547,6 +552,15 @@ export function ProfilePage() {
 
           setAlbumInfo(albumInfoData);
 
+          // Load Spotify liked status for tracks (only for own profile)
+          let spotifyLikedMap = new Map<string, boolean>();
+          if (isOwnProfile && spotifyId) {
+            const trackIds = spotifyTracks.map(t => t.id).filter(Boolean);
+            if (trackIds.length > 0) {
+              spotifyLikedMap = await checkTracksLiked(trackIds);
+            }
+          }
+
           // Convert Spotify tracks to Scrobble format for display
           const tracksForDisplay = spotifyTracks.map(track => ({
             id: track.id,
@@ -557,19 +571,11 @@ export function ProfilePage() {
             album: album.name,
             albumArtURL: album.imageUrl,
             timestamp: new Date(),
-            duration: track.duration_ms
+            duration: track.duration_ms,
+            isLikedOnSpotify: spotifyLikedMap.get(track.id) || false
           } as Scrobble));
 
           setAlbumTracks(tracksForDisplay);
-
-          // Load Spotify liked status for tracks (only for own profile)
-          if (isOwnProfile && spotifyId) {
-            const trackIds = spotifyTracks.map(t => t.id).filter(Boolean);
-            if (trackIds.length > 0) {
-              const spotifyLikedMap = await checkTracksLiked(trackIds);
-              setAlbumTracksSpotifyLiked(spotifyLikedMap);
-            }
-          }
 
           // Load internal likes for tracks (check if user liked them in our app)
           if (spotifyId) {
@@ -1110,7 +1116,6 @@ export function ProfilePage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
                       {albumTracks.map((track, idx) => {
                         const isLikedInApp = likedScrobbleIds.has(track.id);
-                        const isLikedOnSpotify = isOwnProfile && albumTracksSpotifyLiked.get(track.trackId || '');
 
                         return (
                           <div
@@ -1141,13 +1146,17 @@ export function ProfilePage() {
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                {track.title}
-                                {isLikedOnSpotify && (
-                                  <Label theme="success" size="xs">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                      <Icon data={HeartFill} size={10} />
-                                      Spotify
-                                    </div>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.title}</span>
+                                {isOwnProfile && track.isLikedOnSpotify && (
+                                  <Label
+                                    size="xs"
+                                    theme="normal"
+                                    className="spotify-liked-label"
+                                  >
+                                    <span className="spotify-label-content">
+                                      {lang === 'ru' ? 'В любимом' : 'Liked'}
+                                      <SpotifyIcon />
+                                    </span>
                                   </Label>
                                 )}
                               </div>
