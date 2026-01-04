@@ -1213,14 +1213,17 @@ body {
 }
 
 .profile-hero-stat-value {
-  font-size: 28px;
-  font-weight: 700;
+  // Subheader 3 (Gravity UI)
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
   color: var(--notka-brand);
 }
 
 @media (max-width: 768px) {
   .profile-hero-stat-value {
-    font-size: 24px;
+    font-size: 18px;
+    line-height: 22px;
   }
 }
 
@@ -1229,6 +1232,7 @@ body {
   color: var(--g-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: var(--spacing-1); // 4px - модуль дизайн-системы
 }
 
 // Profile content - Two column layout like Last.fm

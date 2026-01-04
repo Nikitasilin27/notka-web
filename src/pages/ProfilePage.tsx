@@ -313,9 +313,22 @@ export function ProfilePage() {
         if (spotifyId && targetOdl && spotifyId !== targetOdl) {
           const following = await isFollowing(spotifyId, targetOdl);
           setFollowStatus(following);
-          
+
           const myData = await getUserScrobbles(spotifyId, 100);
           const match = calculateMusicMatch(myData, scrobblesData, artistsWithImages);
+
+          // Load real artist images for common artists that don't have images
+          const artistsNeedingImages = match.commonArtists.filter(a => !a.imageUrl);
+          if (artistsNeedingImages.length > 0) {
+            const names = artistsNeedingImages.map(a => a.name);
+            const artistImagesMap = await getArtistImages(names);
+
+            match.commonArtists = match.commonArtists.map(artist => ({
+              ...artist,
+              imageUrl: artist.imageUrl || artistImagesMap.get(artist.name) || undefined
+            }));
+          }
+
           setMusicMatch(match);
         }
       } catch {
@@ -326,9 +339,21 @@ export function ProfilePage() {
         if (spotifyId && targetOdl && spotifyId !== targetOdl) {
           const following = await isFollowing(spotifyId, targetOdl);
           setFollowStatus(following);
-          
+
           const myData = await getUserScrobbles(spotifyId, 100);
           const match = calculateMusicMatch(myData, scrobblesData, topArtistsList);
+
+          // Load real artist images for all common artists
+          if (match.commonArtists.length > 0) {
+            const names = match.commonArtists.map(a => a.name);
+            const artistImagesMap = await getArtistImages(names);
+
+            match.commonArtists = match.commonArtists.map(artist => ({
+              ...artist,
+              imageUrl: artistImagesMap.get(artist.name) || artist.imageUrl
+            }));
+          }
+
           setMusicMatch(match);
         }
       }

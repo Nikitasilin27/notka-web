@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Icon, Label } from '@gravity-ui/uikit';
+import { Icon, Label, Link } from '@gravity-ui/uikit';
 import { Heart, HeartFill } from '@gravity-ui/icons';
 import { Scrobble, User } from '../types';
 
@@ -140,7 +139,7 @@ export function ScrobbleCard({
         <div className="scrobble-artist">{scrobble.artist}</div>
         
         {showUser && user && (
-          <Link to={`/profile/${user.odl}`} className="scrobble-user">
+          <Link href={`/profile/${user.odl}`} className="scrobble-user">
             <img 
               src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'} 
               alt={user.name}

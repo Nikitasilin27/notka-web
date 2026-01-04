@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Loader } from '@gravity-ui/uikit';
+import { Loader, Link } from '@gravity-ui/uikit';
 import { getAllUsers } from '../services/firebase';
 import { User } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -54,7 +53,7 @@ export function UsersPage() {
           {users.map((user) => (
             <Link 
               key={user.odl} 
-              to={`/profile/${user.odl}`}
+              href={`/profile/${user.odl}`}
               className="listener-card"
             >
               {/* Background blur from album art */}
