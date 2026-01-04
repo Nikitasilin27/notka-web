@@ -1,4 +1,4 @@
-import { SpotifyTokens, SpotifyCurrentlyPlaying } from '../types';
+import { SpotifyTokens, SpotifyCurrentlyPlaying, SpotifyTrack } from '../types';
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI = import.meta.env.PROD

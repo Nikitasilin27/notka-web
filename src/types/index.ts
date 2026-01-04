@@ -51,6 +51,7 @@ export interface SpotifyTrack {
   name: string;
   artists: { id: string; name: string }[];
   album: {
+    id: string;
     name: string;
     images: { url: string }[];
   };
