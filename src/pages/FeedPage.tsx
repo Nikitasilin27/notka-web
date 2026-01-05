@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
 import { useOnboarding } from '../hooks/useOnboarding';
+import { useLikesSyncMonitor } from '../hooks/useLikesSyncMonitor';
 import {
   getUser,
   likeScrobble,
@@ -26,6 +27,7 @@ export function FeedPage() {
   const { currentlyPlaying, isLoading: isScrobblerLoading } = useScrobbler();
   const { t, lang } = useI18n();
   useOnboarding(); // Show welcome message for new users
+  useLikesSyncMonitor(); // Background sync for Spotify → Notka likes
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());

@@ -586,3 +586,35 @@ export async function getTrackLikedDate(trackId: string): Promise<Date | null> {
     return null;
   }
 }
+
+/**
+ * Get recently liked tracks from Spotify
+ * Returns list of tracks with their added_at dates
+ */
+export async function getRecentLikedTracks(limit = 20): Promise<Array<{ added_at: Date; track: SpotifyTrack }>> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/me/tracks?limit=${limit}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    return (data.items || []).map((item: any) => ({
+      added_at: new Date(item.added_at),
+      track: item.track
+    }));
+  } catch (error) {
+    console.error('Error getting recent liked tracks:', error);
+    return [];
+  }
+}

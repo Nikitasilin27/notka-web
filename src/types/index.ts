@@ -64,3 +64,8 @@ export interface SpotifyCurrentlyPlaying {
   item: SpotifyTrack | null;
   progress_ms: number;
 }
+
+export interface SpotifyLikedTrack {
+  added_at: string;
+  track: SpotifyTrack;
+}
