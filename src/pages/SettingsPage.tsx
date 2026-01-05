@@ -6,34 +6,34 @@ import { deleteField } from 'firebase/firestore';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n, Language } from '../hooks/useI18n';
 import { useAuth } from '../hooks/useAuth';
-import { getUser, createOrUpdateUser } from '../services/firebase';
+import { createOrUpdateUser } from '../services/firebase';
 
 type CrossLikeMode = 'spotify_to_notka' | 'notka_to_spotify' | 'both';
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { t, lang, setLang } = useI18n();
-  const { logout, spotifyId, refreshUser } = useAuth();
+  const { logout, spotifyId, refreshUser, user: authUser } = useAuth();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isLikesOpen, setIsLikesOpen] = useState(false);
-  const [crossLikeEnabled, setCrossLikeEnabled] = useState(true);
-  const [crossLikeMode, setCrossLikeMode] = useState<CrossLikeMode>('spotify_to_notka');
+
+  // Initialize from authUser to avoid race condition
+  const [crossLikeEnabled, setCrossLikeEnabled] = useState(authUser?.crossLikeEnabled ?? true);
+  const [crossLikeMode, setCrossLikeMode] = useState<CrossLikeMode>(
+    authUser?.crossLikeMode && authUser.crossLikeMode !== 'none'
+      ? (authUser.crossLikeMode as CrossLikeMode)
+      : 'spotify_to_notka'
+  );
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load user settings
+  // Update state when authUser changes
   useEffect(() => {
-    const loadSettings = async () => {
-      if (!spotifyId) return;
-      const user = await getUser(spotifyId);
-      if (user) {
-        setCrossLikeEnabled(user.crossLikeEnabled ?? true);
-        // If mode is 'none' (old value), default to 'spotify_to_notka'
-        const mode = user.crossLikeMode === 'none' ? 'spotify_to_notka' : (user.crossLikeMode ?? 'spotify_to_notka');
-        setCrossLikeMode(mode as CrossLikeMode);
-      }
-    };
-    loadSettings();
-  }, [spotifyId]);
+    if (authUser) {
+      setCrossLikeEnabled(authUser.crossLikeEnabled ?? true);
+      const mode = authUser.crossLikeMode === 'none' ? 'spotify_to_notka' : (authUser.crossLikeMode ?? 'spotify_to_notka');
+      setCrossLikeMode(mode as CrossLikeMode);
+    }
+  }, [authUser]);
 
   const handleCrossLikeEnabledChange = async (enabled: boolean) => {
     setCrossLikeEnabled(enabled);
