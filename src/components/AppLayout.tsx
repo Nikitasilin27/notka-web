@@ -43,17 +43,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [spotifyId]);
 
   const handleNotificationClick = async (notification: Notification) => {
+    // Just mark as read - don't close panel or navigate
     if (!notification.read) {
       await markNotificationRead(notification.id);
-    }
-    setNotifPanelOpen(false);
-    
-    if (notification.type === 'like' && notification.data.scrobbleId) {
-      navigate(`/profile/${notification.fromOdl}`);
-    } else if (notification.type === 'follow') {
-      navigate(`/profile/${notification.fromOdl}`);
-    } else if (notification.type === 'suggestion') {
-      navigate(`/profile/${notification.fromOdl}`);
     }
   };
 
