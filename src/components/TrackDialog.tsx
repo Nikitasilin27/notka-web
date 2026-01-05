@@ -2,7 +2,7 @@ import { Dialog, Button, Label, Loader, Link } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { Heart, HeartFill, Play } from '@gravity-ui/icons';
 import { useState, useEffect } from 'react';
-import { getTrackDetails, getTrackAlbums, getSimilarTracks } from '../services/spotify';
+import { getTrackDetails, getSimilarTracks } from '../services/spotify';
 import { likeScrobble, unlikeScrobble } from '../services/firebase';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { useAuth } from '../hooks/useAuth';
@@ -27,16 +27,10 @@ interface TrackDetails {
     name: string;
     images: Array<{ url: string }>;
     release_date: string;
+    album_type: string;
   };
   duration_ms: number;
   preview_url?: string;
-}
-
-interface TrackAlbum {
-  name: string;
-  images: Array<{ url: string }>;
-  release_date: string;
-  album_type: string; // "album", "single", "compilation"
 }
 
 interface SimilarTrack {
@@ -61,7 +55,6 @@ export function TrackDialog({
 }: TrackDialogProps) {
   const { spotifyId, user } = useAuth();
   const [trackDetails, setTrackDetails] = useState<TrackDetails | null>(null);
-  const [trackAlbums, setTrackAlbums] = useState<TrackAlbum[]>([]);
   const [similarTracks, setSimilarTracks] = useState<SimilarTrack[]>([]);
   const [genres, setGenres] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,12 +78,6 @@ export function TrackDialog({
         // Load track details
         const details = await getTrackDetails(trackId);
         setTrackDetails(details);
-
-        // Load albums where this track appears
-        if (details && details.artists[0]) {
-          const albums = await getTrackAlbums(trackId, details.artists[0].id);
-          setTrackAlbums(albums);
-        }
 
         // Load similar tracks
         const similar = await getSimilarTracks(trackId);
@@ -279,36 +266,32 @@ export function TrackDialog({
                 </div>
               )}
 
-              {/* Albums/Releases */}
-              {trackAlbums.length > 0 && (
+              {/* Album */}
+              {trackDetails?.album && (
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ color: '#888', marginBottom: '8px', fontSize: '14px' }}>
-                    {lang === 'ru' ? 'Представлен на' : 'Appears on'}
+                    {lang === 'ru' ? 'Альбом' : 'Album'}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {trackAlbums.slice(0, 3).map((album, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {album.images[0] && (
-                          <img
-                            src={album.images[0].url}
-                            alt={album.name}
-                            style={{ width: '40px', height: '40px', borderRadius: '4px' }}
-                          />
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {album.name}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#888' }}>
-                            {album.album_type === 'album' ? (lang === 'ru' ? 'Альбом' : 'Album') :
-                             album.album_type === 'single' ? (lang === 'ru' ? 'Сингл' : 'Single') :
-                             (lang === 'ru' ? 'Сборник' : 'Compilation')}
-                            {' • '}
-                            {new Date(album.release_date).getFullYear()}
-                          </div>
-                        </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {trackDetails.album.images[0] && (
+                      <img
+                        src={trackDetails.album.images[0].url}
+                        alt={trackDetails.album.name}
+                        style={{ width: '40px', height: '40px', borderRadius: '4px' }}
+                      />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {trackDetails.album.name}
                       </div>
-                    ))}
+                      <div style={{ fontSize: '12px', color: '#888' }}>
+                        {trackDetails.album.album_type === 'album' ? (lang === 'ru' ? 'Альбом' : 'Album') :
+                         trackDetails.album.album_type === 'single' ? (lang === 'ru' ? 'Сингл' : 'Single') :
+                         (lang === 'ru' ? 'Сборник' : 'Compilation')}
+                        {' • '}
+                        {new Date(trackDetails.album.release_date).getFullYear()}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
