@@ -9,21 +9,34 @@
   --notka-brand-hover: var(--g-color-base-brand-hover);
   --notka-bg: var(--g-color-base-background);
   --notka-max-width: 900px;
-  
-  // Spacing tokens
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-5: 20px;
-  --spacing-6: 24px;
-  --spacing-7: 28px;
-  --spacing-8: 32px;
-  --spacing-10: 40px;
+
+  // Gravity UI Spacing System
+  --space-nano: 2px;
+  --space-micro: 4px;
+  --space-s: 8px;
+  --space-m: 12px;
+  --space-l: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 28px;
+  --space-4xl: 32px;
+  --space-5xl: 36px;
+  --space-6xl: 40px;
+
+  // Legacy spacing tokens (mapped to new system for backwards compatibility)
+  --spacing-1: var(--space-micro);
+  --spacing-2: var(--space-s);
+  --spacing-3: var(--space-m);
+  --spacing-4: var(--space-l);
+  --spacing-5: var(--space-xl);
+  --spacing-6: var(--space-2xl);
+  --spacing-7: var(--space-3xl);
+  --spacing-8: var(--space-4xl);
+  --spacing-10: var(--space-6xl);
   --spacing-12: 48px;
-  
+
   // Grid gap (Gravity UI standard)
-  --grid-gap: 20px;
+  --grid-gap: var(--space-xl);
 }
 
 // Wider layout for large screens
@@ -157,12 +170,17 @@ body {
   justify-content: space-between;
   padding: var(--spacing-4);
   border-bottom: 1px solid var(--g-color-line-generic);
-  
+
   h3 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
   }
+}
+
+.notifications-filter {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--g-color-line-generic);
 }
 
 .notifications-panel-list {
@@ -176,7 +194,7 @@ body {
   color: white;
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: var(--space-nano) 6px;
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
@@ -357,7 +375,7 @@ body {
 .notification-time {
   font-size: 11px;
   color: var(--g-color-text-secondary);
-  margin-top: 2px;
+  margin-top: var(--space-nano);
 }
 
 .notification-actions {
@@ -581,9 +599,9 @@ body {
   font-size: 10px;
   background: var(--g-color-base-warning-light);
   color: var(--g-color-text-warning);
-  padding: 2px 6px;
+  padding: var(--space-nano) 6px;
   border-radius: var(--g-border-radius-xs);
-  margin-left: 8px;
+  margin-left: var(--space-s);
 }
 
 .login-hint {
@@ -874,8 +892,8 @@ body {
 .spotify-label-content {
   display: flex;
   align-items: center;
-  gap: 4px;
-  
+  gap: var(--space-micro);
+
   svg {
     flex-shrink: 0;
   }
@@ -933,7 +951,7 @@ body {
 .scrobble-likes-count {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-nano);
   font-size: 11px;
   color: #ff4d6a;
   font-weight: 500;
@@ -1213,14 +1231,17 @@ body {
 }
 
 .profile-hero-stat-value {
-  font-size: 28px;
-  font-weight: 700;
+  // Subheader 3 (Gravity UI)
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
   color: var(--notka-brand);
 }
 
 @media (max-width: 768px) {
   .profile-hero-stat-value {
-    font-size: 24px;
+    font-size: 18px;
+    line-height: 22px;
   }
 }
 
@@ -1229,6 +1250,7 @@ body {
   color: var(--g-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: var(--space-nano); // Микромодуль дизайн-системы
 }
 
 // Profile content - Two column layout like Last.fm
@@ -1730,7 +1752,7 @@ body {
 .language-option {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-nano);
 }
 
 .language-name {
@@ -1747,7 +1769,7 @@ body {
 .settings-item-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-nano);
 }
 
 .settings-item-description {
@@ -1773,7 +1795,7 @@ body {
 .cross-like-option {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-nano);
 }
 
 .cross-like-label {
@@ -1810,7 +1832,7 @@ body {
     max-height: 100vh !important;
     max-height: 100dvh !important;
   }
-  
+
   .g-dialog__content {
     max-width: 100% !important;
     width: 100% !important;
@@ -1818,14 +1840,40 @@ body {
     max-height: calc(100vh - 32px) !important;
     max-height: calc(100dvh - 32px) !important;
   }
-  
+
   .artist-dialog .g-dialog__content,
-  .match-dialog .g-dialog__content {
+  .match-dialog .g-dialog__content,
+  .album-dialog .g-dialog__content {
     width: calc(100% - 32px) !important;
   }
-  
+
   .match-dialog-grid {
     grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  // Album dialog mobile layout
+  .album-dialog .g-dialog__body > div {
+    flex-direction: column !important;
+    gap: var(--spacing-4) !important;
+
+    // Album cover on mobile
+    > div:first-child {
+      width: 100% !important;
+
+      img {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 280px !important;
+        margin: 0 auto !important;
+        display: block !important;
+      }
+    }
+  }
+
+  // Followers/Following dialogs
+  .g-dialog[class*="followers"] .g-dialog__content,
+  .g-dialog[class*="following"] .g-dialog__content {
+    width: calc(100% - 32px) !important;
   }
 }
 

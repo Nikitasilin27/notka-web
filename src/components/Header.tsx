@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Button } from '@gravity-ui/uikit';
+import { useLocation } from 'react-router-dom';
+import { Button, Link } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
 
 export function Header() {
@@ -8,7 +8,7 @@ export function Header() {
 
   return (
     <header className="header">
-      <Link to="/" className="header-logo">
+      <Link href="/" className="header-logo">
         🎵 Notka
       </Link>
 
@@ -20,6 +20,7 @@ export function Header() {
         >
           Лента
         </Button>
+        {/* Listeners page removed - keeping for future restoration
         <Button
           view={location.pathname === '/users' ? 'outlined-info' : 'flat'}
           size="m"
@@ -27,6 +28,7 @@ export function Header() {
         >
           Слушатели
         </Button>
+        */}
         <Button
           view={location.pathname === '/profile' ? 'outlined-info' : 'flat'}
           size="m"

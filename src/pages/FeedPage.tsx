@@ -4,28 +4,30 @@ import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
 import { useOnboarding } from '../hooks/useOnboarding';
+import { useLikesSyncMonitor } from '../hooks/useLikesSyncMonitor';
 import {
   getUser,
   likeScrobble,
   unlikeScrobble,
   checkLikedScrobbles,
   subscribeToRecentScrobbles,
-  subscribeToUserScrobbles,
   subscribeToFollowingScrobbles
 } from '../services/firebase';
+import { addTrackToSpotifyLikes, removeTrackFromSpotifyLikes } from '../services/spotify';
 import { Scrobble, User } from '../types';
 import { NowPlaying } from '../components/NowPlaying';
 import { ScrobbleCard } from '../components/ScrobbleCard';
 import { ScrobbleCardSkeletonList } from '../components/ScrobbleCardSkeleton';
 import { showSuccess, showError } from '../utils/notifications';
 
-type TabId = 'all' | 'following' | 'my';
+type TabId = 'all' | 'following';
 
 export function FeedPage() {
   const { spotifyId, user, avatarUrl } = useAuth();
   const { currentlyPlaying, isLoading: isScrobblerLoading } = useScrobbler();
   const { t, lang } = useI18n();
   useOnboarding(); // Show welcome message for new users
+  useLikesSyncMonitor(); // Background sync for Spotify → Notka likes
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [scrobbles, setScrobbles] = useState<Scrobble[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, User>>(new Map());
@@ -46,8 +48,6 @@ export function FeedPage() {
 
     if (activeTab === 'all') {
       unsubscribe = subscribeToRecentScrobbles(50, handleScrobblesUpdate);
-    } else if (activeTab === 'my' && spotifyId) {
-      unsubscribe = subscribeToUserScrobbles(spotifyId, 50, handleScrobblesUpdate);
     } else if (activeTab === 'following' && spotifyId) {
       unsubscribe = subscribeToFollowingScrobbles(spotifyId, 50, handleScrobblesUpdate);
     }
@@ -128,7 +128,24 @@ export function FeedPage() {
         name: user?.name || 'User',
         avatar: avatarUrl || undefined
       });
-      showSuccess('Liked!');
+
+      // Cross-like sync: Notka → Spotify
+      if (scrobble.trackId) {
+        try {
+          const currentUser = await getUser(spotifyId);
+          if (currentUser?.crossLikeEnabled &&
+              (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+            const success = await addTrackToSpotifyLikes(scrobble.trackId);
+            if (success) {
+              console.log('🔄 Auto-liked in Spotify (Notka sync)');
+            }
+          }
+        } catch (err) {
+          console.error('Cross-like sync error:', err);
+        }
+      }
+
+      showSuccess(t.liked);
     } catch (error) {
       // Rollback on error
       setLikedScrobbleIds(prev => {
@@ -136,12 +153,15 @@ export function FeedPage() {
         newSet.delete(scrobble.id);
         return newSet;
       });
-      showError('Failed to like');
+      showError(t.failedToLike);
     }
-  }, [spotifyId, user?.name, avatarUrl]);
+  }, [spotifyId, user?.name, avatarUrl, t]);
 
   const handleUnlike = useCallback(async (scrobbleId: string) => {
     if (!spotifyId) return;
+
+    // Find scrobble to get trackId for Spotify sync
+    const scrobble = scrobbles.find(s => s.id === scrobbleId);
 
     // Optimistic UI: update immediately
     setLikedScrobbleIds(prev => {
@@ -152,22 +172,38 @@ export function FeedPage() {
 
     try {
       await unlikeScrobble(spotifyId, scrobbleId);
+
+      // Cross-like sync: Notka → Spotify (unlike)
+      if (scrobble?.trackId) {
+        try {
+          const currentUser = await getUser(spotifyId);
+          if (currentUser?.crossLikeEnabled &&
+              (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+            const success = await removeTrackFromSpotifyLikes(scrobble.trackId);
+            if (success) {
+              console.log('🔄 Auto-unliked in Spotify (Notka sync)');
+            }
+          }
+        } catch (err) {
+          console.error('Cross-unlike sync error:', err);
+        }
+      }
     } catch (error) {
       // Rollback on error
       setLikedScrobbleIds(prev => new Set([...prev, scrobbleId]));
-      showError('Failed to unlike');
+      showError(t.failedToUnlike);
     }
-  }, [spotifyId]);
+  }, [spotifyId, scrobbles, t]);
 
   // Like currently playing track
   const handleNowPlayingLike = useCallback(async () => {
     if (!spotifyId || !currentlyPlaying?.item) return;
-    
+
     const track = currentlyPlaying.item;
-    
+
     // First check if there's already a scrobble for this track
     const existingScrobble = scrobbles.find(s => s.trackId === track.id);
-    
+
     if (existingScrobble) {
       // Like the existing scrobble
       await likeScrobble(existingScrobble, {
@@ -189,7 +225,7 @@ export function FeedPage() {
         albumArtURL: track.album.images[0]?.url,
         timestamp: new Date()
       };
-      
+
       await likeScrobble(pseudoScrobble, {
         odl: spotifyId,
         name: user?.name || 'User',
@@ -197,18 +233,32 @@ export function FeedPage() {
       });
       setLikedScrobbleIds(prev => new Set([...prev, pseudoScrobbleId]));
     }
-    
+
+    // Cross-like sync: Notka → Spotify
+    try {
+      const currentUser = await getUser(spotifyId);
+      if (currentUser?.crossLikeEnabled &&
+          (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+        const success = await addTrackToSpotifyLikes(track.id);
+        if (success) {
+          console.log('🔄 Auto-liked in Spotify (Now Playing sync)');
+        }
+      }
+    } catch (err) {
+      console.error('Cross-like sync error:', err);
+    }
+
     setNowPlayingLiked(true);
   }, [spotifyId, currentlyPlaying?.item, user?.name, avatarUrl, scrobbles]);
 
   const handleNowPlayingUnlike = useCallback(async () => {
     if (!spotifyId || !currentlyPlaying?.item) return;
-    
+
     const trackId = currentlyPlaying.item.id;
-    
+
     // Try to find existing scrobble first
     const existingScrobble = scrobbles.find(s => s.trackId === trackId);
-    
+
     if (existingScrobble) {
       await unlikeScrobble(spotifyId, existingScrobble.id);
       setLikedScrobbleIds(prev => {
@@ -226,9 +276,30 @@ export function FeedPage() {
         return newSet;
       });
     }
-    
+
+    // Cross-like sync: Notka → Spotify (unlike)
+    try {
+      const currentUser = await getUser(spotifyId);
+      if (currentUser?.crossLikeEnabled &&
+          (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+        const success = await removeTrackFromSpotifyLikes(trackId);
+        if (success) {
+          console.log('🔄 Auto-unliked in Spotify (Now Playing sync)');
+        }
+      }
+    } catch (err) {
+      console.error('Cross-unlike sync error:', err);
+    }
+
     setNowPlayingLiked(false);
   }, [spotifyId, currentlyPlaying?.item, scrobbles]);
+
+  // Check if scrobble is "live" (less than 1 minute old)
+  const isScrobbleLive = (timestamp: Date): boolean => {
+    const now = new Date();
+    const diff = now.getTime() - timestamp.getTime();
+    return diff < 60000; // 60000ms = 1 minute
+  };
 
   const renderEmptyState = () => {
     if (activeTab === 'following') {
@@ -242,16 +313,7 @@ export function FeedPage() {
         </div>
       );
     }
-    
-    if (activeTab === 'my') {
-      return (
-        <div className="empty-state">
-          <div className="empty-state-icon">🎧</div>
-          <p>{t.turnOnSpotify}</p>
-        </div>
-      );
-    }
-    
+
     return (
       <div className="empty-state">
         <div className="empty-state-icon">🎵</div>
@@ -263,21 +325,20 @@ export function FeedPage() {
   return (
     <div className="feed-page">
       <div className="feed-sticky-header">
-        <NowPlaying 
-          currentlyPlaying={currentlyPlaying} 
+        <NowPlaying
+          currentlyPlaying={currentlyPlaying}
           isLoading={isScrobblerLoading}
           isLiked={nowPlayingLiked}
           onLike={handleNowPlayingLike}
           onUnlike={handleNowPlayingUnlike}
           canLike={!!spotifyId && !!currentlyPlaying?.item}
         />
-        
+
         <div className="feed-tabs">
           <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>
             <TabList>
               <Tab value="all">{t.allScrobbles}</Tab>
               <Tab value="following">{t.followingTab}</Tab>
-              <Tab value="my">{t.profile}</Tab>
             </TabList>
           </TabProvider>
         </div>
@@ -300,13 +361,14 @@ export function FeedPage() {
                   scrobble={scrobble}
                   user={usersMap.get(scrobble.odl)}
                   timeAgo={formatTimeI18n(scrobble.timestamp, t)}
-                  showUser={activeTab !== 'my'}
+                  showUser={true}
                   isLiked={likedScrobbleIds.has(scrobble.id)}
                   onLike={() => handleLike(scrobble)}
                   onUnlike={() => handleUnlike(scrobble.id)}
                   canLike={!!spotifyId}
                   lang={lang}
                   showSpotifyLiked={isOwnScrobble}
+                  showLiveBadge={isScrobbleLive(scrobble.timestamp)}
                 />
               );
             })}

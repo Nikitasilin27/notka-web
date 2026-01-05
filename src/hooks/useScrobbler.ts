@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentlyPlaying, isTrackLiked } from '../services/spotify';
-import { updateCurrentTrack, addScrobble, getLastUserScrobble } from '../services/firebase';
+import { getCurrentlyPlaying, isTrackLiked, getTrackLikedDate } from '../services/spotify';
+import { updateCurrentTrack, addScrobble, getLastUserScrobble, getUser, likeScrobble } from '../services/firebase';
 import { SpotifyCurrentlyPlaying, Scrobble, SpotifyTrack } from '../types';
 import { useAuth } from './useAuth';
 
@@ -184,12 +184,43 @@ export function useScrobbler(): UseScrobblerReturn {
       };
 
       const id = await addScrobble(scrobble);
-      
+
       if (id) {
         globalState.lastScrobbledTrackId = session.trackId;
         globalState.lastScrobbledTime = Date.now();
         setLastScrobble({ ...scrobble, id });
-        
+
+        // Cross-like sync: Spotify → Notka (only for new likes)
+        if (isLikedOnSpotify) {
+          try {
+            const user = await getUser(spotifyId);
+            if (user?.crossLikeEnabled &&
+                (user.crossLikeMode === 'spotify_to_notka' || user.crossLikeMode === 'both')) {
+
+              // Check when track was added to Spotify Liked Songs
+              const likedDate = await getTrackLikedDate(session.trackId);
+              const syncStartedAt = user.crossLikeSyncStartedAt;
+
+              // Only auto-like if track was added AFTER sync was enabled
+              if (likedDate && syncStartedAt && likedDate >= syncStartedAt) {
+                await likeScrobble({ ...scrobble, id }, {
+                  odl: spotifyId,
+                  name: user.name,
+                  avatar: user.avatarURL
+                });
+                console.log('🔄 Auto-liked in Notka (Spotify sync - new like)');
+              } else if (!syncStartedAt) {
+                // Backward compatibility: if no sync start date, don't sync old likes
+                console.log('⏭ Skipped old like (sync started before timestamp tracking)');
+              } else {
+                console.log('⏭ Skipped old like (added before sync was enabled)');
+              }
+            }
+          } catch (err) {
+            console.error('Cross-like sync error:', err);
+          }
+        }
+
         const dur = Math.round(session.track.duration_ms / 1000);
         const likeIcon = isLikedOnSpotify ? ' 💚' : '';
         console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`);

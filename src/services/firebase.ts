@@ -304,22 +304,30 @@ export async function getLastUserScrobble(odl: string): Promise<Scrobble | null>
 
 export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Scrobble[]> {
   const scrobblesRef = collection(db, 'scrobbles');
-  
-  // Get recent scrobbles and filter client-side
-  // This is simpler and works without special indexes
+
+  // Use proper query with where clause to get only user's scrobbles
   const q = query(
     scrobblesRef,
+    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(500)
+    limit(limitCount)
   );
-  
+
   const snapshot = await getDocs(q);
-  
-  const userScrobbles = snapshot.docs
-    .map(doc => docToScrobble(doc))
-    .filter(s => s.odl === odl || s.userId === odl);
-  
-  return userScrobbles.slice(0, limitCount);
+
+  return snapshot.docs.map(doc => docToScrobble(doc));
+}
+
+// Get a single scrobble by ID
+export async function getScrobbleById(scrobbleId: string): Promise<Scrobble | null> {
+  const scrobblesRef = collection(db, 'scrobbles');
+  const scrobbleDoc = await getDoc(doc(scrobblesRef, scrobbleId));
+
+  if (!scrobbleDoc.exists()) {
+    return null;
+  }
+
+  return docToScrobble(scrobbleDoc);
 }
 
 // Check if user recently scrobbled this track (to prevent duplicates)
@@ -664,18 +672,17 @@ export function subscribeToUserScrobbles(
   callback: (scrobbles: Scrobble[]) => void
 ): () => void {
   const scrobblesRef = collection(db, 'scrobbles');
+
+  // Use proper query with where clause to get only user's scrobbles
   const q = query(
     scrobblesRef,
+    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(500) // Get more to filter client-side
+    limit(limitCount)
   );
 
   return onSnapshot(q, (snapshot) => {
-    const userScrobbles = snapshot.docs
-      .map(doc => docToScrobble(doc))
-      .filter(s => s.odl === odl || s.userId === odl)
-      .slice(0, limitCount);
-
+    const userScrobbles = snapshot.docs.map(doc => docToScrobble(doc));
     callback(userScrobbles);
   });
 }
@@ -714,4 +721,49 @@ export function subscribeToFollowingScrobbles(
 
   // Return empty unsubscribe for now
   return () => {};
+}
+
+/**
+ * Subscribe to active users (real-time)
+ * Shows users active in last 24 hours with live currentTrack updates
+ */
+export function subscribeToActiveUsers(
+  currentUserId: string | null,
+  callback: (users: User[]) => void
+): () => void {
+  const usersRef = collection(db, 'users');
+  const q = query(
+    usersRef,
+    orderBy('lastUpdated', 'desc'),
+    limit(50) // Get top 50 recently active users
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const now = Date.now();
+    const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000; // 24 hours in ms
+
+    const activeUsers = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          odl: doc.id,
+          lastUpdated: data.lastUpdated?.toDate(),
+          currentTrack: data.currentTrack ? {
+            ...data.currentTrack,
+            timestamp: data.currentTrack.timestamp?.toDate()
+          } : undefined
+        } as User;
+      })
+      .filter(user => {
+        // Exclude current user
+        if (user.odl === currentUserId) return false;
+
+        // Only show users active in last 24 hours
+        if (!user.lastUpdated) return false;
+        return user.lastUpdated.getTime() >= twentyFourHoursAgo;
+      });
+
+    callback(activeUsers);
+  });
 }
