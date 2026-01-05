@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TabProvider, TabList, Tab } from '@gravity-ui/uikit';
+import { TabProvider, TabList, Tab, Button, Icon, DropdownMenu } from '@gravity-ui/uikit';
+import { BarsDescendingAlignCenter } from '@gravity-ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
@@ -20,6 +21,7 @@ import { ScrobbleCardSkeletonList } from '../components/ScrobbleCardSkeleton';
 import { showSuccess, showError } from '../utils/notifications';
 
 type TabId = 'all' | 'following' | 'my';
+type SortType = 'recent' | 'popular';
 
 export function FeedPage() {
   const { spotifyId, user, avatarUrl } = useAuth();
@@ -32,6 +34,7 @@ export function FeedPage() {
   const [likedScrobbleIds, setLikedScrobbleIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [nowPlayingLiked, setNowPlayingLiked] = useState(false);
+  const [sortType, setSortType] = useState<SortType>('recent');
 
   // Real-time subscription to scrobbles
   useEffect(() => {
@@ -230,6 +233,22 @@ export function FeedPage() {
     setNowPlayingLiked(false);
   }, [spotifyId, currentlyPlaying?.item, scrobbles]);
 
+  // Check if scrobble is "live" (less than 1 minute old)
+  const isScrobbleLive = (timestamp: Date): boolean => {
+    const now = new Date();
+    const diff = now.getTime() - timestamp.getTime();
+    return diff < 60000; // 60000ms = 1 minute
+  };
+
+  // Sort scrobbles based on sortType
+  const sortedScrobbles = [...scrobbles].sort((a, b) => {
+    if (sortType === 'popular') {
+      return (b.likesCount || 0) - (a.likesCount || 0);
+    }
+    // Default: recent first
+    return b.timestamp.getTime() - a.timestamp.getTime();
+  });
+
   const renderEmptyState = () => {
     if (activeTab === 'following') {
       return (
@@ -242,7 +261,7 @@ export function FeedPage() {
         </div>
       );
     }
-    
+
     if (activeTab === 'my') {
       return (
         <div className="empty-state">
@@ -251,7 +270,7 @@ export function FeedPage() {
         </div>
       );
     }
-    
+
     return (
       <div className="empty-state">
         <div className="empty-state-icon">🎵</div>
@@ -263,15 +282,15 @@ export function FeedPage() {
   return (
     <div className="feed-page">
       <div className="feed-sticky-header">
-        <NowPlaying 
-          currentlyPlaying={currentlyPlaying} 
+        <NowPlaying
+          currentlyPlaying={currentlyPlaying}
           isLoading={isScrobblerLoading}
           isLiked={nowPlayingLiked}
           onLike={handleNowPlayingLike}
           onUnlike={handleNowPlayingUnlike}
           canLike={!!spotifyId && !!currentlyPlaying?.item}
         />
-        
+
         <div className="feed-tabs">
           <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val as TabId)}>
             <TabList>
@@ -280,6 +299,25 @@ export function FeedPage() {
               <Tab value="my">{t.profile}</Tab>
             </TabList>
           </TabProvider>
+
+          <DropdownMenu
+            items={[
+              {
+                action: () => setSortType('recent'),
+                text: lang === 'ru' ? 'Недавние' : 'Recent',
+                selected: sortType === 'recent'
+              },
+              {
+                action: () => setSortType('popular'),
+                text: lang === 'ru' ? 'Популярные' : 'Popular',
+                selected: sortType === 'popular'
+              }
+            ]}
+          >
+            <Button view="outlined" size="l">
+              <Icon data={BarsDescendingAlignCenter} size={18} />
+            </Button>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -288,11 +326,11 @@ export function FeedPage() {
           <div className="feed">
             <ScrobbleCardSkeletonList count={5} />
           </div>
-        ) : scrobbles.length === 0 ? (
+        ) : sortedScrobbles.length === 0 ? (
           renderEmptyState()
         ) : (
           <div className="feed">
-            {scrobbles.map((scrobble) => {
+            {sortedScrobbles.map((scrobble) => {
               const isOwnScrobble = scrobble.odl === spotifyId;
               return (
                 <ScrobbleCard
@@ -307,6 +345,7 @@ export function FeedPage() {
                   canLike={!!spotifyId}
                   lang={lang}
                   showSpotifyLiked={isOwnScrobble}
+                  showLiveBadge={isScrobbleLive(scrobble.timestamp)}
                 />
               );
             })}

@@ -30,19 +30,22 @@ interface ScrobbleCardProps {
   lang?: string;
   // Show "В любимом" badge only on own profile
   showSpotifyLiked?: boolean;
+  // Show LIVE badge for recent scrobbles (< 1 minute)
+  showLiveBadge?: boolean;
 }
 
-export function ScrobbleCard({ 
-  scrobble, 
-  user, 
-  timeAgo, 
+export function ScrobbleCard({
+  scrobble,
+  user,
+  timeAgo,
   showUser = true,
   isLiked = false,
   onLike,
   onUnlike,
   canLike = true,
   lang = 'ru',
-  showSpotifyLiked = false
+  showSpotifyLiked = false,
+  showLiveBadge = false
 }: ScrobbleCardProps) {
   const [isLiking, setIsLiking] = useState(false);
   const [localLiked, setLocalLiked] = useState(isLiked);
@@ -123,6 +126,11 @@ export function ScrobbleCard({
       <div className="scrobble-info">
         <div className="scrobble-track-row">
           <span className="scrobble-track">{scrobble.title}</span>
+          {showLiveBadge && (
+            <Label size="xs" theme="utility">
+              LIVE
+            </Label>
+          )}
           {showSpotifyLiked && scrobble.isLikedOnSpotify && (
             <Label
               size="xs"

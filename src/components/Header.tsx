@@ -20,6 +20,7 @@ export function Header() {
         >
           Лента
         </Button>
+        {/* Listeners page removed - keeping for future restoration
         <Button
           view={location.pathname === '/users' ? 'outlined-info' : 'flat'}
           size="m"
@@ -27,6 +28,7 @@ export function Header() {
         >
           Слушатели
         </Button>
+        */}
         <Button
           view={location.pathname === '/profile' ? 'outlined-info' : 'flat'}
           size="m"
