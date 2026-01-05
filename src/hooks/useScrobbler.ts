@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCurrentlyPlaying, isTrackLiked } from '../services/spotify';
-import { updateCurrentTrack, addScrobble, getLastUserScrobble } from '../services/firebase';
+import { updateCurrentTrack, addScrobble, getLastUserScrobble, getUser, likeScrobble } from '../services/firebase';
 import { SpotifyCurrentlyPlaying, Scrobble, SpotifyTrack } from '../types';
 import { useAuth } from './useAuth';
 
@@ -184,12 +184,30 @@ export function useScrobbler(): UseScrobblerReturn {
       };
 
       const id = await addScrobble(scrobble);
-      
+
       if (id) {
         globalState.lastScrobbledTrackId = session.trackId;
         globalState.lastScrobbledTime = Date.now();
         setLastScrobble({ ...scrobble, id });
-        
+
+        // Cross-like sync: Spotify → Notka
+        if (isLikedOnSpotify) {
+          try {
+            const user = await getUser(spotifyId);
+            if (user?.crossLikeEnabled &&
+                (user.crossLikeMode === 'spotify_to_notka' || user.crossLikeMode === 'both')) {
+              await likeScrobble({ ...scrobble, id }, {
+                odl: spotifyId,
+                name: user.name,
+                avatar: user.avatarURL
+              });
+              console.log('🔄 Auto-liked in Notka (Spotify sync)');
+            }
+          } catch (err) {
+            console.error('Cross-like sync error:', err);
+          }
+        }
+
         const dur = Math.round(session.track.duration_ms / 1000);
         const likeIcon = isLikedOnSpotify ? ' 💚' : '';
         console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`);

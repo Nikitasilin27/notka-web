@@ -12,6 +12,7 @@ import {
   subscribeToRecentScrobbles,
   subscribeToFollowingScrobbles
 } from '../services/firebase';
+import { addTrackToSpotifyLikes, removeTrackFromSpotifyLikes } from '../services/spotify';
 import { Scrobble, User } from '../types';
 import { NowPlaying } from '../components/NowPlaying';
 import { ScrobbleCard } from '../components/ScrobbleCard';
@@ -125,6 +126,23 @@ export function FeedPage() {
         name: user?.name || 'User',
         avatar: avatarUrl || undefined
       });
+
+      // Cross-like sync: Notka → Spotify
+      if (scrobble.trackId) {
+        try {
+          const currentUser = await getUser(spotifyId);
+          if (currentUser?.crossLikeEnabled &&
+              (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+            const success = await addTrackToSpotifyLikes(scrobble.trackId);
+            if (success) {
+              console.log('🔄 Auto-liked in Spotify (Notka sync)');
+            }
+          }
+        } catch (err) {
+          console.error('Cross-like sync error:', err);
+        }
+      }
+
       showSuccess(t.liked);
     } catch (error) {
       // Rollback on error
@@ -140,6 +158,9 @@ export function FeedPage() {
   const handleUnlike = useCallback(async (scrobbleId: string) => {
     if (!spotifyId) return;
 
+    // Find scrobble to get trackId for Spotify sync
+    const scrobble = scrobbles.find(s => s.id === scrobbleId);
+
     // Optimistic UI: update immediately
     setLikedScrobbleIds(prev => {
       const newSet = new Set(prev);
@@ -149,22 +170,38 @@ export function FeedPage() {
 
     try {
       await unlikeScrobble(spotifyId, scrobbleId);
+
+      // Cross-like sync: Notka → Spotify (unlike)
+      if (scrobble?.trackId) {
+        try {
+          const currentUser = await getUser(spotifyId);
+          if (currentUser?.crossLikeEnabled &&
+              (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+            const success = await removeTrackFromSpotifyLikes(scrobble.trackId);
+            if (success) {
+              console.log('🔄 Auto-unliked in Spotify (Notka sync)');
+            }
+          }
+        } catch (err) {
+          console.error('Cross-unlike sync error:', err);
+        }
+      }
     } catch (error) {
       // Rollback on error
       setLikedScrobbleIds(prev => new Set([...prev, scrobbleId]));
       showError(t.failedToUnlike);
     }
-  }, [spotifyId, t]);
+  }, [spotifyId, scrobbles, t]);
 
   // Like currently playing track
   const handleNowPlayingLike = useCallback(async () => {
     if (!spotifyId || !currentlyPlaying?.item) return;
-    
+
     const track = currentlyPlaying.item;
-    
+
     // First check if there's already a scrobble for this track
     const existingScrobble = scrobbles.find(s => s.trackId === track.id);
-    
+
     if (existingScrobble) {
       // Like the existing scrobble
       await likeScrobble(existingScrobble, {
@@ -186,7 +223,7 @@ export function FeedPage() {
         albumArtURL: track.album.images[0]?.url,
         timestamp: new Date()
       };
-      
+
       await likeScrobble(pseudoScrobble, {
         odl: spotifyId,
         name: user?.name || 'User',
@@ -194,18 +231,32 @@ export function FeedPage() {
       });
       setLikedScrobbleIds(prev => new Set([...prev, pseudoScrobbleId]));
     }
-    
+
+    // Cross-like sync: Notka → Spotify
+    try {
+      const currentUser = await getUser(spotifyId);
+      if (currentUser?.crossLikeEnabled &&
+          (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+        const success = await addTrackToSpotifyLikes(track.id);
+        if (success) {
+          console.log('🔄 Auto-liked in Spotify (Now Playing sync)');
+        }
+      }
+    } catch (err) {
+      console.error('Cross-like sync error:', err);
+    }
+
     setNowPlayingLiked(true);
   }, [spotifyId, currentlyPlaying?.item, user?.name, avatarUrl, scrobbles]);
 
   const handleNowPlayingUnlike = useCallback(async () => {
     if (!spotifyId || !currentlyPlaying?.item) return;
-    
+
     const trackId = currentlyPlaying.item.id;
-    
+
     // Try to find existing scrobble first
     const existingScrobble = scrobbles.find(s => s.trackId === trackId);
-    
+
     if (existingScrobble) {
       await unlikeScrobble(spotifyId, existingScrobble.id);
       setLikedScrobbleIds(prev => {
@@ -223,7 +274,21 @@ export function FeedPage() {
         return newSet;
       });
     }
-    
+
+    // Cross-like sync: Notka → Spotify (unlike)
+    try {
+      const currentUser = await getUser(spotifyId);
+      if (currentUser?.crossLikeEnabled &&
+          (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
+        const success = await removeTrackFromSpotifyLikes(trackId);
+        if (success) {
+          console.log('🔄 Auto-unliked in Spotify (Now Playing sync)');
+        }
+      }
+    } catch (err) {
+      console.error('Cross-unlike sync error:', err);
+    }
+
     setNowPlayingLiked(false);
   }, [spotifyId, currentlyPlaying?.item, scrobbles]);
 

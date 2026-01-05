@@ -17,7 +17,7 @@ import {
   unlikeScrobble,
   checkLikedScrobbles
 } from '../services/firebase';
-import { getArtistsByIds, getArtistImages, getAlbumInfo, getTrackInfo, getAlbumTracks, SpotifyAlbumInfo, checkTracksLiked } from '../services/spotify';
+import { getArtistsByIds, getArtistImages, getAlbumInfo, getTrackInfo, getAlbumTracks, SpotifyAlbumInfo, checkTracksLiked, addTrackToSpotifyLikes, removeTrackFromSpotifyLikes } from '../services/spotify';
 import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { User, Scrobble } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -503,32 +503,68 @@ export function ProfilePage() {
 
   const handleLike = useCallback(async (scrobble: Scrobble) => {
     if (!spotifyId || !currentUser) return;
-    
+
     await likeScrobble(scrobble, {
       odl: spotifyId,
       name: currentUser.name || 'User',
       avatar: avatarUrl || undefined
     });
-    
+
     setLikedScrobbleIds(prev => new Set([...prev, scrobble.id]));
+
+    // Cross-like sync: Notka → Spotify
+    if (scrobble.trackId) {
+      try {
+        const user = await getUser(spotifyId);
+        if (user?.crossLikeEnabled &&
+            (user.crossLikeMode === 'notka_to_spotify' || user.crossLikeMode === 'both')) {
+          const success = await addTrackToSpotifyLikes(scrobble.trackId);
+          if (success) {
+            console.log('🔄 Auto-liked in Spotify (Profile sync)');
+          }
+        }
+      } catch (err) {
+        console.error('Cross-like sync error:', err);
+      }
+    }
   }, [spotifyId, currentUser, avatarUrl]);
 
   const handleUnlike = useCallback(async (scrobbleId: string) => {
     if (!spotifyId) return;
-    
+
+    // Find scrobble to get trackId for Spotify sync
+    const scrobble = currentScrobbles.find(s => s.id === scrobbleId) ||
+                     likedScrobbles.find(s => s.id === scrobbleId);
+
     await unlikeScrobble(spotifyId, scrobbleId);
-    
+
     setLikedScrobbleIds(prev => {
       const newSet = new Set(prev);
       newSet.delete(scrobbleId);
       return newSet;
     });
-    
+
     // Remove from liked list if in liked mode
     if (tracksMode === 'liked') {
       setLikedScrobbles(prev => prev.filter(s => s.id !== scrobbleId));
     }
-  }, [spotifyId, tracksMode]);
+
+    // Cross-like sync: Notka → Spotify (unlike)
+    if (scrobble?.trackId) {
+      try {
+        const user = await getUser(spotifyId);
+        if (user?.crossLikeEnabled &&
+            (user.crossLikeMode === 'notka_to_spotify' || user.crossLikeMode === 'both')) {
+          const success = await removeTrackFromSpotifyLikes(scrobble.trackId);
+          if (success) {
+            console.log('🔄 Auto-unliked in Spotify (Profile sync)');
+          }
+        }
+      } catch (err) {
+        console.error('Cross-unlike sync error:', err);
+      }
+    }
+  }, [spotifyId, tracksMode, currentScrobbles, likedScrobbles]);
 
   const handleArtistClick = async (artist: TopArtist) => {
     setSelectedArtist(artist);
