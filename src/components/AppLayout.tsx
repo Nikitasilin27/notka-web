@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AsideHeader, FooterItem } from '@gravity-ui/navigation';
-import { Icon, Button } from '@gravity-ui/uikit';
+import { Icon, Button, Avatar, Select } from '@gravity-ui/uikit';
 import { House, Persons, Person, ArrowRightFromSquare, MusicNote, Gear, Bell, BellDot, Check, Xmark } from '@gravity-ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../hooks/useI18n';
@@ -21,6 +21,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
 
   useEffect(() => {
     const handleResize = () => {
@@ -43,9 +44,24 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [spotifyId]);
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Just mark as read - don't close panel or navigate
+    // Mark as read
     if (!notification.read) {
       await markNotificationRead(notification.id);
+    }
+
+    // Navigate based on notification type
+    if (notification.type === 'follow') {
+      navigate(`/profile/${notification.fromOdl}`);
+      setNotifPanelOpen(false);
+    } else if (notification.type === 'like') {
+      // TODO: Open track dialog when implemented
+      // For now, navigate to user profile
+      navigate(`/profile/${notification.fromOdl}`);
+      setNotifPanelOpen(false);
+    } else if (notification.type === 'suggestion') {
+      // TODO: Open track dialog when implemented
+      navigate(`/profile/${notification.fromOdl}`);
+      setNotifPanelOpen(false);
     }
   };
 
@@ -98,62 +114,80 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   // Render notifications panel content
-  const renderNotificationsPanel = () => (
-    <div className="notifications-panel">
-      <div className="notifications-panel-header">
-        <h3>{lang === 'ru' ? 'Уведомления' : 'Notifications'}</h3>
-        {unreadCount > 0 && (
-          <Button view="flat" size="s" onClick={handleMarkAllRead}>
-            {lang === 'ru' ? 'Прочитать все' : 'Mark all read'}
-          </Button>
-        )}
-      </div>
-      
-      <div className="notifications-panel-list">
-        {notifications.length > 0 ? (
-          notifications.map(n => (
-            <div 
-              key={n.id} 
-              className={`notification-item ${!n.read ? 'unread' : ''}`}
-              onClick={() => handleNotificationClick(n)}
-            >
-              {n.fromAvatar ? (
-                <img src={n.fromAvatar} alt="" className="notification-avatar" />
-              ) : (
-                <div className="notification-avatar notification-avatar-placeholder">
-                  {(n.fromName || n.fromOdl).charAt(0).toUpperCase()}
+  const renderNotificationsPanel = () => {
+    // Filter notifications based on selected filter
+    const filteredNotifications = notifFilter === 'unread'
+      ? notifications.filter(n => !n.read)
+      : notifications;
+
+    return (
+      <div className="notifications-panel">
+        <div className="notifications-panel-header">
+          <h3>{lang === 'ru' ? 'Уведомления' : 'Notifications'}</h3>
+          {unreadCount > 0 && (
+            <Button view="flat" size="s" onClick={handleMarkAllRead}>
+              {lang === 'ru' ? 'Прочитать все' : 'Mark all read'}
+            </Button>
+          )}
+        </div>
+
+        {/* Filter */}
+        <div className="notifications-filter">
+          <Select
+            value={[notifFilter]}
+            onUpdate={(values) => setNotifFilter(values[0] as 'all' | 'unread')}
+            options={[
+              { value: 'all', content: lang === 'ru' ? 'Все уведомления' : 'All notifications' },
+              { value: 'unread', content: lang === 'ru' ? 'Непрочитанные' : 'Unread' },
+            ]}
+            width="max"
+          />
+        </div>
+
+        <div className="notifications-panel-list">
+          {filteredNotifications.length > 0 ? (
+            filteredNotifications.map(n => (
+              <div
+                key={n.id}
+                className={`notification-item ${!n.read ? 'unread' : ''}`}
+                onClick={() => handleNotificationClick(n)}
+              >
+                <Avatar
+                  imgUrl={n.fromAvatar}
+                  text={n.fromName || n.fromOdl}
+                  size="m"
+                />
+                <div className="notification-content">
+                  <div className="notification-text">{getNotificationText(n)}</div>
+                  <div className="notification-time">{formatTimeAgo(n.timestamp)}</div>
                 </div>
-              )}
-              <div className="notification-content">
-                <div className="notification-text">{getNotificationText(n)}</div>
-                <div className="notification-time">{formatTimeAgo(n.timestamp)}</div>
+                {!n.read && (
+                  <div className="notification-actions">
+                    <button
+                      className="notification-action-btn"
+                      onClick={(e) => handleMarkRead(e, n)}
+                    >
+                      <Icon data={Check} size={14} />
+                    </button>
+                    <button
+                      className="notification-action-btn"
+                      onClick={(e) => handleDelete(e, n)}
+                    >
+                      <Icon data={Xmark} size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
-              {!n.read && (
-                <div className="notification-actions">
-                  <button 
-                    className="notification-action-btn"
-                    onClick={(e) => handleMarkRead(e, n)}
-                  >
-                    <Icon data={Check} size={14} />
-                  </button>
-                  <button 
-                    className="notification-action-btn"
-                    onClick={(e) => handleDelete(e, n)}
-                  >
-                    <Icon data={Xmark} size={14} />
-                  </button>
-                </div>
-              )}
+            ))
+          ) : (
+            <div className="notifications-empty">
+              {lang === 'ru' ? 'Нет уведомлений' : 'No notifications'}
             </div>
-          ))
-        ) : (
-          <div className="notifications-empty">
-            {lang === 'ru' ? 'Нет уведомлений' : 'No notifications'}
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const menuItems = [
     {

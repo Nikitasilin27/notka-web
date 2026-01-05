@@ -170,12 +170,17 @@ body {
   justify-content: space-between;
   padding: var(--spacing-4);
   border-bottom: 1px solid var(--g-color-line-generic);
-  
+
   h3 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
   }
+}
+
+.notifications-filter {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--g-color-line-generic);
 }
 
 .notifications-panel-list {
