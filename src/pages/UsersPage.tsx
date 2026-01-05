@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader, Link } from '@gravity-ui/uikit';
-import { getAllUsers } from '../services/firebase';
+import { subscribeToActiveUsers } from '../services/firebase';
 import { User } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../hooks/useI18n';
@@ -12,21 +12,16 @@ export function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadUsers();
-  }, [spotifyId]);
+    setIsLoading(true);
 
-  const loadUsers = async () => {
-    try {
-      const data = await getAllUsers(50);
-      // Show all users except current user
-      const filtered = data.filter(u => u.odl !== spotifyId);
-      setUsers(filtered);
-    } catch (error) {
-      console.error('Error loading users:', error);
-    } finally {
+    // Subscribe to active users with real-time updates
+    const unsubscribe = subscribeToActiveUsers(spotifyId, (activeUsers) => {
+      setUsers(activeUsers);
       setIsLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, [spotifyId]);
 
   if (isLoading) {
     return (
@@ -38,14 +33,17 @@ export function UsersPage() {
 
   return (
     <div>
-      <h1 className="page-title">{t.listenersTitle}</h1>
-      
+      <h1 className="page-title">{t.discoveryTitle || 'Discovery'}</h1>
+      <p className="page-subtitle" style={{ marginTop: -8, marginBottom: 16, opacity: 0.7 }}>
+        {t.discoverySubtitle || 'Active users in the last 24 hours'}
+      </p>
+
       {users.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">👥</div>
-          <p>{t.noListeners}</p>
+          <div className="empty-state-icon">🔍</div>
+          <p>{t.noActiveUsers || 'No active users yet'}</p>
           <p style={{ fontSize: 14, marginTop: 8, opacity: 0.7 }}>
-            {t.sendLink}: notka-mvp.web.app
+            {t.comeBackLater || 'Come back later when more people are listening'}
           </p>
         </div>
       ) : (

@@ -18,12 +18,16 @@ interface Translations {
   noFollowingScrobbles: string;
   followSomeone: string;
   
-  // Users
+  // Users / Discovery
   listenersTitle: string;
   noListeners: string;
   inviteFriends: string;
   sendLink: string;
   offline: string;
+  discoveryTitle: string;
+  discoverySubtitle: string;
+  noActiveUsers: string;
+  comeBackLater: string;
   
   // Profile
   scrobbles: string;
@@ -87,12 +91,16 @@ const translations: Record<Language, Translations> = {
     noFollowingScrobbles: 'Нет скробблов от подписок',
     followSomeone: 'Подпишись на кого-нибудь в разделе "Слушатели"',
     
-    // Users
+    // Users / Discovery
     listenersTitle: 'Слушатели',
     noListeners: 'Пока никого нет. Пригласи друзей!',
     inviteFriends: 'Пригласи друзей!',
     sendLink: 'Отправь им ссылку',
     offline: 'Не в сети',
+    discoveryTitle: 'Discovery',
+    discoverySubtitle: 'Активные пользователи за последние 24 часа',
+    noActiveUsers: 'Пока никого нет активных',
+    comeBackLater: 'Загляни позже, когда появятся слушатели',
     
     // Profile
     scrobbles: 'скробблов',
@@ -154,12 +162,16 @@ const translations: Record<Language, Translations> = {
     noFollowingScrobbles: 'No scrobbles from following',
     followSomeone: 'Follow someone in the "Listeners" section',
     
-    // Users
+    // Users / Discovery
     listenersTitle: 'Listeners',
     noListeners: 'No one here yet. Invite friends!',
     inviteFriends: 'Invite friends!',
     sendLink: 'Send them link',
     offline: 'Offline',
+    discoveryTitle: 'Discovery',
+    discoverySubtitle: 'Active users in the last 24 hours',
+    noActiveUsers: 'No active users yet',
+    comeBackLater: 'Come back later when more people are listening',
     
     // Profile
     scrobbles: 'scrobbles',

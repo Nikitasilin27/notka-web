@@ -710,3 +710,48 @@ export function subscribeToFollowingScrobbles(
   // Return empty unsubscribe for now
   return () => {};
 }
+
+/**
+ * Subscribe to active users (real-time)
+ * Shows users active in last 24 hours with live currentTrack updates
+ */
+export function subscribeToActiveUsers(
+  currentUserId: string | null,
+  callback: (users: User[]) => void
+): () => void {
+  const usersRef = collection(db, 'users');
+  const q = query(
+    usersRef,
+    orderBy('lastUpdated', 'desc'),
+    limit(50) // Get top 50 recently active users
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const now = Date.now();
+    const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000; // 24 hours in ms
+
+    const activeUsers = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          odl: doc.id,
+          lastUpdated: data.lastUpdated?.toDate(),
+          currentTrack: data.currentTrack ? {
+            ...data.currentTrack,
+            timestamp: data.currentTrack.timestamp?.toDate()
+          } : undefined
+        } as User;
+      })
+      .filter(user => {
+        // Exclude current user
+        if (user.odl === currentUserId) return false;
+
+        // Only show users active in last 24 hours
+        if (!user.lastUpdated) return false;
+        return user.lastUpdated.getTime() >= twentyFourHoursAgo;
+      });
+
+    callback(activeUsers);
+  });
+}
