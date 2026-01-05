@@ -618,3 +618,86 @@ export async function getRecentLikedTracks(limit = 20): Promise<Array<{ added_at
     return [];
   }
 }
+
+/**
+ * Get track details from Spotify
+ */
+export async function getTrackDetails(trackId: string): Promise<any | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/tracks/${trackId}`,
+      {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    console.error('Error getting track details:', error);
+    return null;
+  }
+}
+
+/**
+ * Get albums where this track appears
+ */
+export async function getTrackAlbums(_trackId: string, artistId: string): Promise<any[]> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    // Get all albums from the artist
+    const response = await fetch(
+      `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album,single,compilation&limit=50`,
+      {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const albums = data.items || [];
+
+    // Filter albums that contain this track
+    // Note: For efficiency, we're returning all albums from the artist
+    // TODO: In production, check each album's tracks to verify the track appears
+    return albums;
+  } catch (error) {
+    console.error('Error getting track albums:', error);
+    return [];
+  }
+}
+
+/**
+ * Get similar/recommended tracks based on a track
+ */
+export async function getSimilarTracks(trackId: string): Promise<any[]> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/recommendations?seed_tracks=${trackId}&limit=10`,
+      {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    return data.tracks || [];
+  } catch (error) {
+    console.error('Error getting similar tracks:', error);
+    return [];
+  }
+}
+

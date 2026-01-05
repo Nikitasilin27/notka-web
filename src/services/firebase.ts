@@ -318,6 +318,18 @@ export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Sc
   return snapshot.docs.map(doc => docToScrobble(doc));
 }
 
+// Get a single scrobble by ID
+export async function getScrobbleById(scrobbleId: string): Promise<Scrobble | null> {
+  const scrobblesRef = collection(db, 'scrobbles');
+  const scrobbleDoc = await getDoc(doc(scrobblesRef, scrobbleId));
+
+  if (!scrobbleDoc.exists()) {
+    return null;
+  }
+
+  return docToScrobble(scrobbleDoc);
+}
+
 // Check if user recently scrobbled this track (to prevent duplicates)
 export async function getRecentUserScrobble(odl: string, trackId: string): Promise<Scrobble | null> {
   const scrobblesRef = collection(db, 'scrobbles');

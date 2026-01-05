@@ -5,7 +5,9 @@ import { Icon, Button, Avatar, Select } from '@gravity-ui/uikit';
 import { House, Persons, Person, ArrowRightFromSquare, MusicNote, Gear, Bell, BellDot, Check, Xmark } from '@gravity-ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../hooks/useI18n';
-import { subscribeToNotifications, markNotificationRead, deleteNotification, markAllNotificationsRead, Notification } from '../services/firebase';
+import { subscribeToNotifications, markNotificationRead, deleteNotification, markAllNotificationsRead, Notification, getScrobbleById } from '../services/firebase';
+import { TrackDialog } from './TrackDialog';
+import { Scrobble } from '../types';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -22,6 +24,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
+  const [trackDialogOpen, setTrackDialogOpen] = useState(false);
+  const [selectedScrobble, setSelectedScrobble] = useState<Scrobble | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -54,10 +58,15 @@ export function AppLayout({ children }: AppLayoutProps) {
       navigate(`/profile/${notification.fromOdl}`);
       setNotifPanelOpen(false);
     } else if (notification.type === 'like') {
-      // TODO: Open track dialog when implemented
-      // For now, navigate to user profile
-      navigate(`/profile/${notification.fromOdl}`);
-      setNotifPanelOpen(false);
+      // Fetch scrobble and open track dialog
+      if (notification.data.scrobbleId) {
+        const scrobble = await getScrobbleById(notification.data.scrobbleId);
+        if (scrobble) {
+          setSelectedScrobble(scrobble);
+          setTrackDialogOpen(true);
+          setNotifPanelOpen(false);
+        }
+      }
     } else if (notification.type === 'suggestion') {
       // TODO: Open track dialog when implemented
       navigate(`/profile/${notification.fromOdl}`);
@@ -283,6 +292,24 @@ export function AppLayout({ children }: AppLayoutProps) {
             <span className="tab-bar-label">{t.settings}</span>
           </button>
         </nav>
+
+        {/* Track Dialog */}
+        {selectedScrobble && (
+          <TrackDialog
+            trackId={selectedScrobble.trackId || null}
+            trackName={selectedScrobble.title}
+            artistName={selectedScrobble.artist}
+            albumArtURL={selectedScrobble.albumArtURL}
+            scrobble={selectedScrobble}
+            isLiked={false}
+            open={trackDialogOpen}
+            onClose={() => {
+              setTrackDialogOpen(false);
+              setSelectedScrobble(null);
+            }}
+            lang={lang}
+          />
+        )}
       </div>
     );
   }
@@ -350,6 +377,24 @@ export function AppLayout({ children }: AppLayoutProps) {
             {renderNotificationsPanel()}
           </div>
         </>
+      )}
+
+      {/* Track Dialog */}
+      {selectedScrobble && (
+        <TrackDialog
+          trackId={selectedScrobble.trackId || null}
+          trackName={selectedScrobble.title}
+          artistName={selectedScrobble.artist}
+          albumArtURL={selectedScrobble.albumArtURL}
+          scrobble={selectedScrobble}
+          isLiked={false}
+          open={trackDialogOpen}
+          onClose={() => {
+            setTrackDialogOpen(false);
+            setSelectedScrobble(null);
+          }}
+          lang={lang}
+        />
       )}
     </>
   );
