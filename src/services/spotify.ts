@@ -531,7 +531,7 @@ export async function addTrackToSpotifyLikes(trackId: string): Promise<boolean> 
 export async function removeTrackFromSpotifyLikes(trackId: string): Promise<boolean> {
   const tokens = getTokens();
   if (!tokens) return false;
-  
+
   try {
     const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
       method: 'DELETE',
@@ -540,16 +540,49 @@ export async function removeTrackFromSpotifyLikes(trackId: string): Promise<bool
         'Content-Type': 'application/json'
       }
     });
-    
+
     if (response.status === 401) {
       const refreshed = await refreshAccessToken();
       if (!refreshed) return false;
       return removeTrackFromSpotifyLikes(trackId);
     }
-    
+
     return response.ok;
   } catch (error) {
     console.error('Error removing track from Spotify likes:', error);
     return false;
+  }
+}
+
+/**
+ * Get when track was added to Spotify Liked Songs
+ * Returns Date if track is liked, null if not liked or error
+ */
+export async function getTrackLikedDate(trackId: string): Promise<Date | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data.items && data.items.length > 0 && data.items[0].added_at) {
+      return new Date(data.items[0].added_at);
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error getting track liked date:', error);
+    return null;
   }
 }

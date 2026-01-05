@@ -37,12 +37,19 @@ export function SettingsPage() {
   const handleCrossLikeEnabledChange = async (enabled: boolean) => {
     setCrossLikeEnabled(enabled);
     if (!spotifyId) return;
-    
+
     setIsSaving(true);
-    await createOrUpdateUser({
+    const updates: any = {
       odl: spotifyId,
       crossLikeEnabled: enabled
-    });
+    };
+
+    // Set sync start timestamp when enabling sync
+    if (enabled) {
+      updates.crossLikeSyncStartedAt = new Date();
+    }
+
+    await createOrUpdateUser(updates);
     await refreshUser();
     setIsSaving(false);
   };
