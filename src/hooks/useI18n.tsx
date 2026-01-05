@@ -97,10 +97,10 @@ const translations: Record<Language, Translations> = {
     inviteFriends: 'Пригласи друзей!',
     sendLink: 'Отправь им ссылку',
     offline: 'Не в сети',
-    discoveryTitle: 'Discovery',
-    discoverySubtitle: 'Активные пользователи за последние 24 часа',
-    noActiveUsers: 'Пока никого нет активных',
-    comeBackLater: 'Загляни позже, когда появятся слушатели',
+    discoveryTitle: 'Активные',
+    discoverySubtitle: 'Пользователи, которые слушают музыку прямо сейчас',
+    noActiveUsers: 'Никого нет в сети',
+    comeBackLater: 'Загляни позже',
     
     // Profile
     scrobbles: 'скробблов',
