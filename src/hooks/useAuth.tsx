@@ -36,6 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      console.log('🔍 Spotify User Data:', {
+        id: spotifyUser.id,
+        display_name: spotifyUser.display_name,
+        id_length: spotifyUser.id?.length,
+        id_type: typeof spotifyUser.id
+      });
+
       setSpotifyId(spotifyUser.id);
 
       // Get or create user in Firebase
