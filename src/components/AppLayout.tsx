@@ -175,7 +175,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     },
     {
       id: 'users',
-      title: t.listeners,
+      title: t.discoveryTitle,
       icon: Persons,
       iconSize: 18,
       link: '/users',
