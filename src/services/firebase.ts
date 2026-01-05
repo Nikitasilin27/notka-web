@@ -304,22 +304,18 @@ export async function getLastUserScrobble(odl: string): Promise<Scrobble | null>
 
 export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Scrobble[]> {
   const scrobblesRef = collection(db, 'scrobbles');
-  
-  // Get recent scrobbles and filter client-side
-  // This is simpler and works without special indexes
+
+  // Use proper query with where clause to get only user's scrobbles
   const q = query(
     scrobblesRef,
+    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(500)
+    limit(limitCount)
   );
-  
+
   const snapshot = await getDocs(q);
-  
-  const userScrobbles = snapshot.docs
-    .map(doc => docToScrobble(doc))
-    .filter(s => s.odl === odl || s.userId === odl);
-  
-  return userScrobbles.slice(0, limitCount);
+
+  return snapshot.docs.map(doc => docToScrobble(doc));
 }
 
 // Check if user recently scrobbled this track (to prevent duplicates)
@@ -664,18 +660,17 @@ export function subscribeToUserScrobbles(
   callback: (scrobbles: Scrobble[]) => void
 ): () => void {
   const scrobblesRef = collection(db, 'scrobbles');
+
+  // Use proper query with where clause to get only user's scrobbles
   const q = query(
     scrobblesRef,
+    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(500) // Get more to filter client-side
+    limit(limitCount)
   );
 
   return onSnapshot(q, (snapshot) => {
-    const userScrobbles = snapshot.docs
-      .map(doc => docToScrobble(doc))
-      .filter(s => s.odl === odl || s.userId === odl)
-      .slice(0, limitCount);
-
+    const userScrobbles = snapshot.docs.map(doc => docToScrobble(doc));
     callback(userScrobbles);
   });
 }
