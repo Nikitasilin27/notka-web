@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Switch, RadioGroup, Radio, Button } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { Moon, Sun, Globe, ChevronDown, ChevronUp, ArrowRightFromSquare, Heart } from '@gravity-ui/icons';
+import { deleteField } from 'firebase/firestore';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n, Language } from '../hooks/useI18n';
 import { useAuth } from '../hooks/useAuth';
@@ -47,6 +48,10 @@ export function SettingsPage() {
     // Set sync start timestamp when enabling sync
     if (enabled) {
       updates.crossLikeSyncStartedAt = new Date();
+    } else {
+      // Clear crossLikeMode and timestamp when disabling sync
+      updates.crossLikeMode = deleteField();
+      updates.crossLikeSyncStartedAt = deleteField();
     }
 
     await createOrUpdateUser(updates);
