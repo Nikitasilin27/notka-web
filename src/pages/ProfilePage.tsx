@@ -24,6 +24,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
 import { useScrobbler } from '../hooks/useScrobbler';
 import { ScrobbleCard } from '../components/ScrobbleCard';
+import { TrackDialog } from '../components/TrackDialog';
 
 // Custom Spotify icon SVG - centered with brand color
 const SpotifyIcon = () => (
@@ -115,6 +116,10 @@ export function ProfilePage() {
   const [albumTracks, setAlbumTracks] = useState<Scrobble[]>([]);
   const [albumInfo, setAlbumInfo] = useState<SpotifyAlbumInfo | null>(null);
   const [isAlbumInfoLoading, setIsAlbumInfoLoading] = useState(false);
+
+  // Track dialog
+  const [selectedTrack, setSelectedTrack] = useState<Scrobble | null>(null);
+  const [isTrackDialogOpen, setIsTrackDialogOpen] = useState(false);
 
   const isOwnProfile = odl === spotifyId || !odl;
   const targetOdl = odl || spotifyId;
@@ -658,6 +663,16 @@ export function ProfilePage() {
     setAlbumTracks([]);
   };
 
+  const handleTrackClick = (track: Scrobble) => {
+    setSelectedTrack(track);
+    setIsTrackDialogOpen(true);
+  };
+
+  const closeTrackDialog = () => {
+    setSelectedTrack(null);
+    setIsTrackDialogOpen(false);
+  };
+
   const closeArtistDialog = () => {
     setSelectedArtist(null);
     setArtistInfo(null);
@@ -1034,7 +1049,12 @@ export function ProfilePage() {
                   </h4>
                   <div className="artist-dialog-tracks-list">
                     {artistTracks.map((track, idx) => (
-                      <div key={`${track.id}-${idx}`} className="artist-dialog-track">
+                      <div
+                        key={`${track.id}-${idx}`}
+                        className="artist-dialog-track"
+                        onClick={() => handleTrackClick(track)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         {track.albumArtURL && <img src={track.albumArtURL} alt="" className="artist-dialog-track-art" />}
                         <div className="artist-dialog-track-info">
                           <div className="artist-dialog-track-title">{track.title}</div>
@@ -1188,8 +1208,10 @@ export function ProfilePage() {
                               padding: '8px',
                               borderRadius: '4px',
                               background: 'rgba(255,255,255,0.02)',
-                              transition: 'background 0.2s'
+                              transition: 'background 0.2s',
+                              cursor: 'pointer'
                             }}
+                            onClick={() => handleTrackClick(track)}
                             onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                             onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                           >
@@ -1423,6 +1445,21 @@ export function ProfilePage() {
           textButtonCancel={lang === 'ru' ? 'Закрыть' : 'Close'}
         />
       </Dialog>
+
+      {/* Track Dialog */}
+      {selectedTrack && (
+        <TrackDialog
+          trackId={selectedTrack.trackId || null}
+          trackName={selectedTrack.title}
+          artistName={selectedTrack.artist}
+          albumArtURL={selectedTrack.albumArtURL}
+          scrobble={selectedTrack}
+          isLiked={likedScrobbleIds.has(selectedTrack.id)}
+          open={isTrackDialogOpen}
+          onClose={closeTrackDialog}
+          lang={lang}
+        />
+      )}
     </div>
   );
 }

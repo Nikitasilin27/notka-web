@@ -154,16 +154,18 @@ export function ScrobbleCard({
           )}
         </div>
         <div className="scrobble-artist">{scrobble.artist}</div>
-        
+
         {showUser && user && (
-          <Link href={`/profile/${user.odl}`} className="scrobble-user">
-            <img 
-              src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'} 
-              alt={user.name}
-              className="scrobble-user-avatar"
-            />
-            {user.name}
-          </Link>
+          <div onClick={(e) => e.stopPropagation()}>
+            <Link href={`/profile/${user.odl}`} className="scrobble-user">
+              <img
+                src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'}
+                alt={user.name}
+                className="scrobble-user-avatar"
+              />
+              {user.name}
+            </Link>
+          </div>
         )}
       </div>
       

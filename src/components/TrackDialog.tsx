@@ -1,9 +1,10 @@
-import { Dialog, Button, Label, Loader } from '@gravity-ui/uikit';
+import { Dialog, Button, Label, Loader, Link } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { Heart, HeartFill, Play } from '@gravity-ui/icons';
 import { useState, useEffect } from 'react';
 import { getTrackDetails, getTrackAlbums, getSimilarTracks } from '../services/spotify';
 import { likeScrobble, unlikeScrobble } from '../services/firebase';
+import { getArtistWikipediaInfo, WikipediaArtistInfo } from '../services/wikipedia';
 import { useAuth } from '../hooks/useAuth';
 import { Scrobble } from '../types';
 
@@ -16,7 +17,6 @@ interface TrackDialogProps {
   isLiked: boolean;
   open: boolean;
   onClose: () => void;
-  onArtistClick?: (artistName: string) => void;
   lang: 'ru' | 'en';
 }
 
@@ -57,7 +57,6 @@ export function TrackDialog({
   isLiked: initialIsLiked,
   open,
   onClose,
-  onArtistClick,
   lang
 }: TrackDialogProps) {
   const { spotifyId, user } = useAuth();
@@ -68,6 +67,9 @@ export function TrackDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [isLiking, setIsLiking] = useState(false);
+  const [artistDialogOpen, setArtistDialogOpen] = useState(false);
+  const [artistInfo, setArtistInfo] = useState<WikipediaArtistInfo | null>(null);
+  const [isArtistInfoLoading, setIsArtistInfoLoading] = useState(false);
 
   useEffect(() => {
     setIsLiked(initialIsLiked);
@@ -143,6 +145,19 @@ export function TrackDialog({
       : date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  const handleArtistClick = async () => {
+    const artist = trackDetails?.artists[0]?.name || artistName;
+    if (!artist) return;
+
+    setArtistDialogOpen(true);
+    setArtistInfo(null);
+    setIsArtistInfoLoading(true);
+
+    const info = await getArtistWikipediaInfo(artist, lang);
+    setArtistInfo(info);
+    setIsArtistInfoLoading(false);
+  };
+
   return (
     <Dialog
       open={open}
@@ -176,29 +191,32 @@ export function TrackDialog({
             {/* Track Info - Right */}
             <div style={{ flex: 1, minWidth: 0 }}>
               {/* Artist (clickable) */}
-              <div
+              <Link
+                view="normal"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleArtistClick();
+                }}
                 style={{
                   fontSize: '16px',
                   color: '#888',
                   marginBottom: '8px',
-                  cursor: onArtistClick ? 'pointer' : 'default',
-                  transition: 'color 0.2s'
-                }}
-                onClick={() => {
-                  const artist = trackDetails?.artists[0]?.name || artistName;
-                  if (onArtistClick && artist) {
-                    onArtistClick(artist);
-                  }
+                  display: 'block',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  transition: 'color 0.2s',
+                  fontWeight: 400
                 }}
                 onMouseEnter={(e) => {
-                  if (onArtistClick) e.currentTarget.style.color = 'var(--notka-brand)';
+                  e.currentTarget.style.color = 'var(--notka-brand)';
                 }}
                 onMouseLeave={(e) => {
-                  if (onArtistClick) e.currentTarget.style.color = '#888';
+                  e.currentTarget.style.color = '#888';
                 }}
               >
                 {trackDetails?.artists[0]?.name || artistName}
-              </div>
+              </Link>
 
               {/* Track Name + Like */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -360,6 +378,52 @@ export function TrackDialog({
           </div>
         )}
       />
+
+      {/* Artist Info Dialog */}
+      <Dialog
+        open={artistDialogOpen}
+        onClose={() => setArtistDialogOpen(false)}
+        size="m"
+        hasCloseButton={false}
+        className="artist-dialog"
+      >
+        <Dialog.Header caption={trackDetails?.artists[0]?.name || artistName || ''} />
+        <Dialog.Body>
+          {isArtistInfoLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <Loader size="m" />
+            </div>
+          ) : (
+            <div>
+              {artistInfo ? (
+                <p style={{ lineHeight: 1.6, color: '#888' }}>{artistInfo.extract}</p>
+              ) : (
+                <p style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
+                  {lang === 'ru' ? 'Информация об исполнителе не найдена' : 'Artist information not found'}
+                </p>
+              )}
+            </div>
+          )}
+        </Dialog.Body>
+        <Dialog.Footer
+          renderButtons={() => (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', width: '100%' }}>
+              <Button view="flat" size="m" onClick={() => setArtistDialogOpen(false)}>
+                {lang === 'ru' ? 'Закрыть' : 'Close'}
+              </Button>
+              {artistInfo?.content_urls?.desktop?.page && (
+                <Button
+                  view="outlined"
+                  size="m"
+                  onClick={() => window.open(artistInfo.content_urls!.desktop.page, '_blank')}
+                >
+                  Wikipedia
+                </Button>
+              )}
+            </div>
+          )}
+        />
+      </Dialog>
     </Dialog>
   );
 }
