@@ -128,7 +128,7 @@ export function FeedPage() {
         name: user?.name || 'User',
         avatar: avatarUrl || undefined
       });
-      showSuccess('Liked!');
+      showSuccess(t.liked);
     } catch (error) {
       // Rollback on error
       setLikedScrobbleIds(prev => {
@@ -136,9 +136,9 @@ export function FeedPage() {
         newSet.delete(scrobble.id);
         return newSet;
       });
-      showError('Failed to like');
+      showError(t.failedToLike);
     }
-  }, [spotifyId, user?.name, avatarUrl]);
+  }, [spotifyId, user?.name, avatarUrl, t]);
 
   const handleUnlike = useCallback(async (scrobbleId: string) => {
     if (!spotifyId) return;
@@ -155,9 +155,9 @@ export function FeedPage() {
     } catch (error) {
       // Rollback on error
       setLikedScrobbleIds(prev => new Set([...prev, scrobbleId]));
-      showError('Failed to unlike');
+      showError(t.failedToUnlike);
     }
-  }, [spotifyId]);
+  }, [spotifyId, t]);
 
   // Like currently playing track
   const handleNowPlayingLike = useCallback(async () => {

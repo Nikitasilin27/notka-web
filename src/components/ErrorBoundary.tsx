@@ -29,7 +29,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    showError('Something went wrong. Please refresh the page.');
+    const lang = (localStorage.getItem('notka-language') || 'ru') as 'ru' | 'en';
+    const message = lang === 'ru'
+      ? 'Что-то пошло не так. Пожалуйста, обнови страницу.'
+      : 'Something went wrong. Please refresh the page.';
+    showError(message);
   }
 
   render(): ReactNode {
