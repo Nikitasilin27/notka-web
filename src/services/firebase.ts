@@ -155,74 +155,74 @@ export async function getFollowCounts(userId: string): Promise<{ followers: numb
 // Get scrobbles from users that someone follows
 export async function getFollowingScrobbles(userId: string, limitCount = 50): Promise<Scrobble[]> {
   const followingIds = await getFollowing(userId);
-  
+
   if (followingIds.length === 0) {
     return [];
   }
-  
-  // Get recent scrobbles and filter by following list
+
   const scrobblesRef = collection(db, 'scrobbles');
-  const q = query(
-    scrobblesRef,
-    orderBy('timestamp', 'desc'),
-    limit(300) // Get more to filter
-  );
-  
-  const snapshot = await getDocs(q);
-  
-  const followingScrobbles = snapshot.docs
-    .map(doc => docToScrobble(doc))
-    .filter(s => followingIds.includes(s.odl) || followingIds.includes(s.userId || ''));
-  
-  return followingScrobbles.slice(0, limitCount);
+
+  // Firestore 'in' operator supports max 10 values
+  // If more than 10 following, split into batches
+  const batchSize = 10;
+  const allScrobbles: Scrobble[] = [];
+
+  for (let i = 0; i < followingIds.length; i += batchSize) {
+    const batch = followingIds.slice(i, i + batchSize);
+
+    const q = query(
+      scrobblesRef,
+      where('odl', 'in', batch),
+      orderBy('timestamp', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(q);
+    allScrobbles.push(...snapshot.docs.map(doc => docToScrobble(doc)));
+  }
+
+  // Sort by timestamp and limit
+  return allScrobbles
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, limitCount);
 }
 
 // Scrobble operations - совместимы с iOS структурой
 export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<string | null> {
   const scrobblesRef = collection(db, 'scrobbles');
   const odl = scrobble.odl;
-  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000; // Increased to 5 min
-  
-  // Duplicate check - get recent scrobbles and filter for this user
+  const fiveMinutesAgo = Timestamp.fromMillis(Date.now() - 5 * 60 * 1000);
+
+  // Duplicate check - query ONLY this user's recent scrobbles
   try {
     const recentQuery = query(
       scrobblesRef,
+      where('odl', '==', odl),
+      where('timestamp', '>', fiveMinutesAgo),
       orderBy('timestamp', 'desc'),
-      limit(200) // Get more to ensure we find user's scrobbles
+      limit(50)
     );
-    
+
     const snapshot = await getDocs(recentQuery);
-    
-    // Filter to this user's recent scrobbles
-    const userRecentScrobbles = snapshot.docs
-      .map(doc => {
-        const data = doc.data();
-        return {
-          odl: data.odl || data.userId || '',
-          userId: data.userId || '',
-          trackId: data.trackId,
-          timestamp: data.timestamp?.toDate() || new Date()
-        };
-      })
-      .filter(s => s.odl === odl || s.userId === odl);
-    
-    // Check if this exact track was scrobbled by this user in last 5 minutes
-    const isDuplicate = userRecentScrobbles.some(s => 
-      s.trackId === scrobble.trackId &&
-      s.timestamp.getTime() > fiveMinutesAgo
-    );
-    
+
+    // Check if this exact track was scrobbled recently
+    const isDuplicate = snapshot.docs.some(doc => {
+      const data = doc.data();
+      return data.trackId === scrobble.trackId;
+    });
+
     if (isDuplicate) {
       logger.log('⏭ Duplicate prevented (Firebase check):', scrobble.title);
       return null;
     }
-    
-    // Also check if this EXACT timestamp already exists (same scrobble)
-    const sameTimestamp = userRecentScrobbles.some(s =>
-      s.trackId === scrobble.trackId &&
-      Math.abs(s.timestamp.getTime() - scrobble.timestamp.getTime()) < 60000 // Within 1 minute
-    );
-    
+
+    // Check if EXACT timestamp already exists (same scrobble)
+    const sameTimestamp = snapshot.docs.some(doc => {
+      const data = doc.data();
+      return data.trackId === scrobble.trackId &&
+        Math.abs(data.timestamp.toMillis() - scrobble.timestamp.getTime()) < 60000;
+    });
+
     if (sameTimestamp) {
       logger.log('⏭ Same timestamp duplicate prevented:', scrobble.title);
       return null;
@@ -287,40 +287,32 @@ function docToScrobble(doc: any): Scrobble {
 // Get user's last scrobble (for duplicate prevention on page reload)
 export async function getLastUserScrobble(odl: string): Promise<Scrobble | null> {
   const scrobblesRef = collection(db, 'scrobbles');
-  
+
   const q = query(
     scrobblesRef,
+    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(100)
+    limit(1)
   );
-  
+
   const snapshot = await getDocs(q);
-  
-  const userScrobble = snapshot.docs
-    .map(doc => docToScrobble(doc))
-    .find(s => s.odl === odl || s.userId === odl);
-  
-  return userScrobble || null;
+
+  if (snapshot.empty) return null;
+  return docToScrobble(snapshot.docs[0]);
 }
 
 export async function getUserScrobbles(odl: string, limitCount = 20): Promise<Scrobble[]> {
   const scrobblesRef = collection(db, 'scrobbles');
-  
-  // Get recent scrobbles and filter client-side
-  // This is simpler and works without special indexes
+
   const q = query(
     scrobblesRef,
+    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(500)
+    limit(limitCount)
   );
-  
+
   const snapshot = await getDocs(q);
-  
-  const userScrobbles = snapshot.docs
-    .map(doc => docToScrobble(doc))
-    .filter(s => s.odl === odl || s.userId === odl);
-  
-  return userScrobbles.slice(0, limitCount);
+  return snapshot.docs.map(doc => docToScrobble(doc));
 }
 
 // Check if user recently scrobbled this track (to prevent duplicates)
@@ -667,28 +659,29 @@ export function subscribeToUserScrobbles(
   const scrobblesRef = collection(db, 'scrobbles');
   const q = query(
     scrobblesRef,
+    where('odl', '==', odl),
     orderBy('timestamp', 'desc'),
-    limit(500) // Get more to filter client-side
+    limit(limitCount)
   );
 
   return onSnapshot(q, (snapshot) => {
-    const userScrobbles = snapshot.docs
-      .map(doc => docToScrobble(doc))
-      .filter(s => s.odl === odl || s.userId === odl)
-      .slice(0, limitCount);
-
+    const userScrobbles = snapshot.docs.map(doc => docToScrobble(doc));
     callback(userScrobbles);
   });
 }
 
 /**
  * Subscribe to following scrobbles (real-time)
+ * Note: Due to Firestore 'in' operator limit (max 10 items),
+ * this only works well with <=10 following users
  */
 export function subscribeToFollowingScrobbles(
   userId: string,
   limitCount: number,
   callback: (scrobbles: Scrobble[]) => void
 ): () => void {
+  let unsubscribes: (() => void)[] = [];
+
   // First get following list
   getFollowing(userId).then(followingIds => {
     if (followingIds.length === 0) {
@@ -697,22 +690,41 @@ export function subscribeToFollowingScrobbles(
     }
 
     const scrobblesRef = collection(db, 'scrobbles');
-    const q = query(
-      scrobblesRef,
-      orderBy('timestamp', 'desc'),
-      limit(300)
-    );
 
-    return onSnapshot(q, (snapshot) => {
-      const followingScrobbles = snapshot.docs
-        .map(doc => docToScrobble(doc))
-        .filter(s => followingIds.includes(s.odl) || followingIds.includes(s.userId || ''))
-        .slice(0, limitCount);
+    // Split into batches of 10 (Firestore 'in' limit)
+    const batchSize = 10;
+    const allScrobbles = new Map<string, Scrobble>();
 
-      callback(followingScrobbles);
-    });
+    for (let i = 0; i < followingIds.length; i += batchSize) {
+      const batch = followingIds.slice(i, i + batchSize);
+
+      const q = query(
+        scrobblesRef,
+        where('odl', 'in', batch),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+      );
+
+      const unsub = onSnapshot(q, (snapshot) => {
+        // Add/update scrobbles from this batch
+        snapshot.docs.forEach(doc => {
+          allScrobbles.set(doc.id, docToScrobble(doc));
+        });
+
+        // Sort all scrobbles by timestamp and limit
+        const sortedScrobbles = Array.from(allScrobbles.values())
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+          .slice(0, limitCount);
+
+        callback(sortedScrobbles);
+      });
+
+      unsubscribes.push(unsub);
+    }
   });
 
-  // Return empty unsubscribe for now
-  return () => {};
+  // Return function to unsubscribe from all batches
+  return () => {
+    unsubscribes.forEach(unsub => unsub());
+  };
 }
