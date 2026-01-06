@@ -1,4 +1,4 @@
-import { 
+import {
   collection, 
   doc, 
   getDoc, 
@@ -18,6 +18,7 @@ import {
 import { signInWithCustomToken, signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { User, Scrobble } from '../types';
+import { logger } from '../utils/logger';
 
 // User operations
 export async function getUser(odl: string): Promise<User | null> {
@@ -212,7 +213,7 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
     );
     
     if (isDuplicate) {
-      console.log('⏭ Duplicate prevented (Firebase check):', scrobble.title);
+      logger.log('⏭ Duplicate prevented (Firebase check):', scrobble.title);
       return null;
     }
     
@@ -223,11 +224,11 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
     );
     
     if (sameTimestamp) {
-      console.log('⏭ Same timestamp duplicate prevented:', scrobble.title);
+      logger.log('⏭ Same timestamp duplicate prevented:', scrobble.title);
       return null;
     }
   } catch (e) {
-    console.log('Duplicate check error, proceeding with caution:', e);
+    logger.log('Duplicate check error, proceeding with caution:', e);
     // If we can't check, don't add - better safe than duplicate
     return null;
   }
@@ -256,7 +257,7 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
   
   const docRef = await addDoc(scrobblesRef, scrobbleData);
   
-  console.log('✓ Scrobbled:', scrobble.title);
+  logger.log('✓ Scrobbled:', scrobble.title);
   return docRef.id;
 }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { logger } from '../utils/logger';
 import { useParams } from 'react-router-dom';
 import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
@@ -161,7 +162,7 @@ export function ProfilePage() {
       }));
       setLikedScrobbles(likedAsScrobbles);
     } catch (error) {
-      console.error('Error loading liked tracks:', error);
+      logger.error('Error loading liked tracks:', error);
     } finally {
       setIsLikedLoading(false);
     }
@@ -312,7 +313,7 @@ export function ProfilePage() {
       
       setIsArtistsLoading(false);
     } catch (error) {
-      console.error('Error loading profile:', error);
+      logger.error('Error loading profile:', error);
     } finally {
       setIsLoading(false);
     }
@@ -388,7 +389,7 @@ export function ProfilePage() {
         setFollowCounts(prev => ({ ...prev, followers: prev.followers + 1 }));
       }
     } catch (error) {
-      console.error('Error toggling follow:', error);
+      logger.error('Error toggling follow:', error);
     } finally {
       setIsFollowLoading(false);
     }

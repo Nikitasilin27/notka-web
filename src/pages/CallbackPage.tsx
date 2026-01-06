@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { logger } from '../utils/logger';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from '@gravity-ui/uikit';
 import { exchangeCodeForTokens } from '../services/spotify';
@@ -30,7 +31,7 @@ export function CallbackPage() {
         window.location.href = '/';
       })
       .catch((err) => {
-        console.error('Token exchange error:', err);
+        logger.error('Token exchange error:', err);
         setError('Ошибка авторизации');
         setTimeout(() => navigate('/'), 2000);
       });

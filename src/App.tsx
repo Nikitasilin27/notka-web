@@ -13,10 +13,14 @@ import { FeedPage } from './pages/FeedPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { initSentry } from './utils/sentry';
 
 // Custom theme - must be imported AFTER Gravity UI
 import './styles/theme.css';
 import './styles/error-boundary.css';
+
+// Initialize Sentry error tracking
+initSentry();
 
 
 

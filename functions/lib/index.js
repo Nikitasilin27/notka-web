@@ -1,21 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onSuggestionCreated = exports.onFollowCreated = exports.onLikeDeleted = exports.onLikeCreated = void 0;
-const functions = require("firebase-functions");
+const firestore_1 = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 admin.initializeApp();
 const db = admin.firestore();
 // ============================================
 // LIKE FUNCTIONS
 // ============================================
-exports.onLikeCreated = functions.firestore
-    .document("likes/{likeId}")
-    .onCreate(async (snap) => {
+exports.onLikeCreated = (0, firestore_1.onDocumentCreated)("likes/{likeId}", async (event) => {
+    const snap = event.data;
+    if (!snap)
+        return;
     const data = snap.data();
     const { scrobbleId, ownerOdl, odl, odlName, odlAvatar, trackName, artistName } = data;
     // Don't notify yourself
     if (odl === ownerOdl)
-        return null;
+        return;
     const batch = db.batch();
     // 1. Increment likesCount
     const scrobbleRef = db.collection("scrobbles").doc(scrobbleId);
@@ -37,23 +38,23 @@ exports.onLikeCreated = functions.firestore
     });
     await batch.commit();
     console.log(`Like: ${odl} -> ${scrobbleId}`);
-    return null;
 });
-exports.onLikeDeleted = functions.firestore
-    .document("likes/{likeId}")
-    .onDelete(async (snap) => {
+exports.onLikeDeleted = (0, firestore_1.onDocumentDeleted)("likes/{likeId}", async (event) => {
+    const snap = event.data;
+    if (!snap)
+        return;
     const { scrobbleId } = snap.data();
     await db.collection("scrobbles").doc(scrobbleId).update({
         likesCount: admin.firestore.FieldValue.increment(-1)
     });
-    return null;
 });
 // ============================================
 // FOLLOW NOTIFICATION
 // ============================================
-exports.onFollowCreated = functions.firestore
-    .document("followers/{followId}")
-    .onCreate(async (snap) => {
+exports.onFollowCreated = (0, firestore_1.onDocumentCreated)("followers/{followId}", async (event) => {
+    const snap = event.data;
+    if (!snap)
+        return;
     const { followerId, followingId, followerName, followerAvatar } = snap.data();
     const notifId = `${followingId}_${Date.now()}`;
     await db.collection("notifications").doc(notifId).set({
@@ -66,14 +67,14 @@ exports.onFollowCreated = functions.firestore
         read: false,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return null;
 });
 // ============================================
-// SUGGESTION NOTIFICATION  
+// SUGGESTION NOTIFICATION
 // ============================================
-exports.onSuggestionCreated = functions.firestore
-    .document("suggestions/{suggestionId}")
-    .onCreate(async (snap, context) => {
+exports.onSuggestionCreated = (0, firestore_1.onDocumentCreated)("suggestions/{suggestionId}", async (event) => {
+    const snap = event.data;
+    if (!snap)
+        return;
     const { fromId, toId, fromName, fromAvatar, trackName, artistName } = snap.data();
     const notifId = `${toId}_${Date.now()}`;
     await db.collection("notifications").doc(notifId).set({
@@ -83,13 +84,12 @@ exports.onSuggestionCreated = functions.firestore
         fromName: fromName || "Someone",
         fromAvatar: fromAvatar || null,
         data: {
-            suggestionId: context.params.suggestionId,
+            suggestionId: event.params.suggestionId,
             trackName,
             artistName,
         },
         read: false,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return null;
 });
 //# sourceMappingURL=index.js.map

@@ -1,4 +1,5 @@
 // Wikipedia API for artist information
+import { logger } from '../utils/logger';
 
 export interface WikipediaArtistInfo {
   title: string;
@@ -83,7 +84,7 @@ export async function getArtistWikipediaInfo(
     wikiCache.set(cacheKey, info);
     return info;
   } catch (error) {
-    console.error('Error fetching Wikipedia info:', error);
+    logger.error('Error fetching Wikipedia info:', error);
     wikiCache.set(cacheKey, null);
     return null;
   }

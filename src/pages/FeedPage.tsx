@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '../utils/logger';
 import { TabProvider, TabList, Tab } from '@gravity-ui/uikit';
 import { useAuth } from '../hooks/useAuth';
 import { useScrobbler } from '../hooks/useScrobbler';
@@ -110,7 +111,7 @@ export function FeedPage() {
         setLikedScrobbleIds(likedIds);
       }
     } catch (error) {
-      console.error('Error processing scrobbles:', error);
+      logger.error('Error processing scrobbles:', error);
     } finally {
       setIsLoading(false);
     }

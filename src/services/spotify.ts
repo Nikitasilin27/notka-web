@@ -1,4 +1,5 @@
 import { SpotifyTokens, SpotifyCurrentlyPlaying } from '../types';
+import { logger } from '../utils/logger';
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI = import.meta.env.PROD
@@ -180,19 +181,19 @@ export async function getCurrentlyPlaying(): Promise<SpotifyCurrentlyPlaying | n
   if (response.status === 429) {
     const retryAfter = response.headers.get('Retry-After');
     const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000; // Default 60s
-    console.warn(`Spotify API rate limited. Retry after ${waitTime / 1000}s`);
+    logger.warn(`Spotify API rate limited. Retry after ${waitTime / 1000}s`);
     throw new Error(`RATE_LIMITED:${waitTime}`);
   }
 
   // Handle other errors
   if (response.status === 401) {
     // Token expired, will be refreshed by getValidAccessToken
-    console.log('Token expired, refreshing...');
+    logger.log('Token expired, refreshing...');
     return null;
   }
 
   if (!response.ok) {
-    console.error(`Spotify API error: ${response.status} ${response.statusText}`);
+    logger.error(`Spotify API error: ${response.status} ${response.statusText}`);
     return null;
   }
 
@@ -280,7 +281,7 @@ export async function getArtistImage(artistName: string): Promise<string | null>
     
     return imageUrl;
   } catch (error) {
-    console.error('Error fetching artist image:', error);
+    logger.error('Error fetching artist image:', error);
     artistImageCache.set(normalizedName, null);
     return null;
   }
@@ -318,7 +319,7 @@ export async function getArtistById(artistId: string): Promise<SpotifyArtist | n
     if (!response.ok) return null;
     return response.json();
   } catch (error) {
-    console.error('Error fetching artist by ID:', error);
+    logger.error('Error fetching artist by ID:', error);
     return null;
   }
 }
@@ -348,7 +349,7 @@ export async function getArtistsByIds(artistIds: string[]): Promise<Map<string, 
         }
       }
     } catch (error) {
-      console.error('Error fetching artists by IDs:', error);
+      logger.error('Error fetching artists by IDs:', error);
     }
   }
   
@@ -386,7 +387,7 @@ export async function checkTracksLiked(trackIds: string[]): Promise<Map<string, 
         });
       }
     } catch (error) {
-      console.error('Error checking liked tracks:', error);
+      logger.error('Error checking liked tracks:', error);
     }
   }
   
@@ -425,7 +426,7 @@ export async function addTrackToSpotifyLikes(trackId: string): Promise<boolean> 
     
     return response.ok;
   } catch (error) {
-    console.error('Error adding track to Spotify likes:', error);
+    logger.error('Error adding track to Spotify likes:', error);
     return false;
   }
 }
@@ -454,7 +455,7 @@ export async function removeTrackFromSpotifyLikes(trackId: string): Promise<bool
     
     return response.ok;
   } catch (error) {
-    console.error('Error removing track from Spotify likes:', error);
+    logger.error('Error removing track from Spotify likes:', error);
     return false;
   }
 }

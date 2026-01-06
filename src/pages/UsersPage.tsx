@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { Link } from 'react-router-dom';
 import { Loader } from '@gravity-ui/uikit';
 import { getAllUsers } from '../services/firebase';
@@ -23,7 +24,7 @@ export function UsersPage() {
       const filtered = data.filter(u => u.odl !== spotifyId);
       setUsers(filtered);
     } catch (error) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
     } finally {
       setIsLoading(false);
     }

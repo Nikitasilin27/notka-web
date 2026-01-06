@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { logger } from '../utils/logger';
 import { User } from '../types';
 import { getTokens, clearTokens, getCurrentUser } from '../services/spotify';
 import { getUser, createOrUpdateUser } from '../services/firebase';
@@ -62,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(firebaseUser);
     } catch (error) {
-      console.error('Error loading user:', error);
+      logger.error('Error loading user:', error);
       clearTokens();
     } finally {
       setIsLoading(false);

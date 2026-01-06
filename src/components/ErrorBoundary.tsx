@@ -1,4 +1,5 @@
 import { Component, ReactNode } from 'react';
+import { logger } from '../utils/logger';
 import { showError } from '../utils/notifications';
 
 interface Props {
@@ -28,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    logger.error('ErrorBoundary caught an error:', error, errorInfo);
     showError('Something went wrong. Please refresh the page.');
   }
 
