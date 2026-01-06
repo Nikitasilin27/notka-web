@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { User } from '../types';
 import { getTokens, clearTokens, getCurrentUser } from '../services/spotify';
 import { getUser, createOrUpdateUser } from '../services/firebase';
+import { logger } from '../utils/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -36,6 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
         return;
       }
+
+      logger.log('🔍 Spotify User Data:', {
+        id: spotifyUser.id,
+        display_name: spotifyUser.display_name,
+        id_length: spotifyUser.id?.length,
+        id_type: typeof spotifyUser.id
+      });
 
       setSpotifyId(spotifyUser.id);
 

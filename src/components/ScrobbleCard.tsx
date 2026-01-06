@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Icon, Label } from '@gravity-ui/uikit';
+import { Icon, Label, Link } from '@gravity-ui/uikit';
 import { Heart, HeartFill } from '@gravity-ui/icons';
 import { Scrobble, User } from '../types';
+import { TrackDialog } from './TrackDialog';
 
 // Custom Spotify icon SVG - centered with brand color
 const SpotifyIcon = () => (
@@ -31,23 +31,27 @@ interface ScrobbleCardProps {
   lang?: string;
   // Show "В любимом" badge only on own profile
   showSpotifyLiked?: boolean;
+  // Show LIVE badge for recent scrobbles (< 1 minute)
+  showLiveBadge?: boolean;
 }
 
-export function ScrobbleCard({ 
-  scrobble, 
-  user, 
-  timeAgo, 
+export function ScrobbleCard({
+  scrobble,
+  user,
+  timeAgo,
   showUser = true,
   isLiked = false,
   onLike,
   onUnlike,
   canLike = true,
   lang = 'ru',
-  showSpotifyLiked = false
+  showSpotifyLiked = false,
+  showLiveBadge = false
 }: ScrobbleCardProps) {
   const [isLiking, setIsLiking] = useState(false);
   const [localLiked, setLocalLiked] = useState(isLiked);
   const [localLikesCount, setLocalLikesCount] = useState(scrobble.likesCount || 0);
+  const [isTrackDialogOpen, setIsTrackDialogOpen] = useState(false);
 
   // Sync localLiked with prop when it changes
   useEffect(() => {
@@ -81,10 +85,17 @@ export function ScrobbleCard({
 
   const hasLikeButton = (onLike || onUnlike) && canLike;
 
+  const handleCardClick = () => {
+    if (scrobble.trackId) {
+      setIsTrackDialogOpen(true);
+    }
+  };
+
   return (
-    <div className="scrobble-card">
-      {/* Album Art */}
-      <div className="scrobble-art-container">
+    <>
+      <div className="scrobble-card" onClick={handleCardClick} style={{ cursor: scrobble.trackId ? 'pointer' : 'default' }}>
+        {/* Album Art */}
+        <div className="scrobble-art-container">
         {scrobble.albumArtURL ? (
           <img 
             src={scrobble.albumArtURL} 
@@ -124,6 +135,11 @@ export function ScrobbleCard({
       <div className="scrobble-info">
         <div className="scrobble-track-row">
           <span className="scrobble-track">{scrobble.title}</span>
+          {showLiveBadge && (
+            <Label size="xs" theme="utility">
+              LIVE
+            </Label>
+          )}
           {showSpotifyLiked && scrobble.isLikedOnSpotify && (
             <Label
               size="xs"
@@ -138,16 +154,18 @@ export function ScrobbleCard({
           )}
         </div>
         <div className="scrobble-artist">{scrobble.artist}</div>
-        
+
         {showUser && user && (
-          <Link to={`/profile/${user.odl}`} className="scrobble-user">
-            <img 
-              src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'} 
-              alt={user.name}
-              className="scrobble-user-avatar"
-            />
-            {user.name}
-          </Link>
+          <div onClick={(e) => e.stopPropagation()}>
+            <Link href={`/profile/${user.odl}`} className="scrobble-user">
+              <img
+                src={user.avatarURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="%23666"/></svg>'}
+                alt={user.name}
+                className="scrobble-user-avatar"
+              />
+              {user.name}
+            </Link>
+          </div>
         )}
       </div>
       
@@ -162,5 +180,19 @@ export function ScrobbleCard({
         <span className="scrobble-time">{timeAgo}</span>
       </div>
     </div>
+
+    {/* Track Dialog */}
+    <TrackDialog
+      trackId={scrobble.trackId || null}
+      trackName={scrobble.title}
+      artistName={scrobble.artist}
+      albumArtURL={scrobble.albumArtURL}
+      scrobble={scrobble}
+      isLiked={localLiked}
+      open={isTrackDialogOpen}
+      onClose={() => setIsTrackDialogOpen(false)}
+      lang={lang as 'ru' | 'en'}
+    />
+    </>
   );
 }

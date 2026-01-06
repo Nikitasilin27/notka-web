@@ -11,6 +11,7 @@ export interface User {
   // Cross-like settings
   crossLikeEnabled?: boolean; // Master toggle for cross-likes
   crossLikeMode?: 'spotify_to_notka' | 'notka_to_spotify' | 'both' | 'none';
+  crossLikeSyncStartedAt?: Date; // When sync was enabled (for filtering old likes)
 }
 
 export interface CurrentTrack {
@@ -51,6 +52,7 @@ export interface SpotifyTrack {
   name: string;
   artists: { id: string; name: string }[];
   album: {
+    id: string;
     name: string;
     images: { url: string }[];
   };
@@ -61,4 +63,9 @@ export interface SpotifyCurrentlyPlaying {
   is_playing: boolean;
   item: SpotifyTrack | null;
   progress_ms: number;
+}
+
+export interface SpotifyLikedTrack {
+  added_at: string;
+  track: SpotifyTrack;
 }

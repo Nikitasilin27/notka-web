@@ -1,5 +1,5 @@
 import { toaster } from '@gravity-ui/uikit/toaster-singleton';
-import { logger } from '../utils/logger';
+import { logger } from './logger';
 
 /**
  * Show success notification
