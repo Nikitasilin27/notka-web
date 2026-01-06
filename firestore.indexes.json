@@ -33,6 +33,14 @@
         { "fieldPath": "trackId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "scrobbles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "odl", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

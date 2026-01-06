@@ -5,6 +5,7 @@ import { useScrobbler } from '../hooks/useScrobbler';
 import { useI18n, formatTimeI18n } from '../hooks/useI18n';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useLikesSyncMonitor } from '../hooks/useLikesSyncMonitor';
+import { logger } from '../utils/logger';
 import {
   getUser,
   likeScrobble,
@@ -110,7 +111,7 @@ export function FeedPage() {
         setLikedScrobbleIds(likedIds);
       }
     } catch (error) {
-      console.error('Error processing scrobbles:', error);
+      logger.error('Error processing scrobbles:', error);
     } finally {
       setIsLoading(false);
     }
@@ -137,11 +138,11 @@ export function FeedPage() {
               (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
             const success = await addTrackToSpotifyLikes(scrobble.trackId);
             if (success) {
-              console.log('🔄 Auto-liked in Spotify (Notka sync)');
+              logger.log('🔄 Auto-liked in Spotify (Notka sync)');
             }
           }
         } catch (err) {
-          console.error('Cross-like sync error:', err);
+          logger.error('Cross-like sync error:', err);
         }
       }
 
@@ -181,11 +182,11 @@ export function FeedPage() {
               (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
             const success = await removeTrackFromSpotifyLikes(scrobble.trackId);
             if (success) {
-              console.log('🔄 Auto-unliked in Spotify (Notka sync)');
+              logger.log('🔄 Auto-unliked in Spotify (Notka sync)');
             }
           }
         } catch (err) {
-          console.error('Cross-unlike sync error:', err);
+          logger.error('Cross-unlike sync error:', err);
         }
       }
     } catch (error) {
@@ -241,11 +242,11 @@ export function FeedPage() {
           (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
         const success = await addTrackToSpotifyLikes(track.id);
         if (success) {
-          console.log('🔄 Auto-liked in Spotify (Now Playing sync)');
+          logger.log('🔄 Auto-liked in Spotify (Now Playing sync)');
         }
       }
     } catch (err) {
-      console.error('Cross-like sync error:', err);
+      logger.error('Cross-like sync error:', err);
     }
 
     setNowPlayingLiked(true);
@@ -284,11 +285,11 @@ export function FeedPage() {
           (currentUser.crossLikeMode === 'notka_to_spotify' || currentUser.crossLikeMode === 'both')) {
         const success = await removeTrackFromSpotifyLikes(trackId);
         if (success) {
-          console.log('🔄 Auto-unliked in Spotify (Now Playing sync)');
+          logger.log('🔄 Auto-unliked in Spotify (Now Playing sync)');
         }
       }
     } catch (err) {
-      console.error('Cross-unlike sync error:', err);
+      logger.error('Cross-unlike sync error:', err);
     }
 
     setNowPlayingLiked(false);

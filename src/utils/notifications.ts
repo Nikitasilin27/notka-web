@@ -1,4 +1,5 @@
 import { toaster } from '@gravity-ui/uikit/toaster-singleton';
+import { logger } from './logger';
 
 /**
  * Show success notification
@@ -101,7 +102,7 @@ export async function withToast<T>(
 
     showError(errorMessage);
 
-    console.error('Operation failed:', err);
+    logger.error('Operation failed:', err);
     return null;
   }
 }

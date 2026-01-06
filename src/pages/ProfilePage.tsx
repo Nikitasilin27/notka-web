@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup, Label } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { PersonPlus, PersonXmark, Magnifier, ChevronLeft, HeartFill } from '@gravity-ui/icons';
+import { logger } from '../utils/logger';
 import {
   getUser,
   getUserScrobbles,
@@ -189,7 +190,7 @@ export function ProfilePage() {
       }));
       setLikedScrobbles(likedAsScrobbles);
     } catch (error) {
-      console.error('Error loading liked tracks:', error);
+      logger.error('Error loading liked tracks:', error);
     } finally {
       setIsLikedLoading(false);
     }
@@ -365,7 +366,7 @@ export function ProfilePage() {
       
       setIsArtistsLoading(false);
     } catch (error) {
-      console.error('Error loading profile:', error);
+      logger.error('Error loading profile:', error);
     } finally {
       setIsLoading(false);
     }
@@ -451,7 +452,7 @@ export function ProfilePage() {
         setFollowCounts(prev => ({ ...prev, followers: prev.followers + 1 }));
       }
     } catch (error) {
-      console.error('Error toggling follow:', error);
+      logger.error('Error toggling follow:', error);
     } finally {
       setIsFollowLoading(false);
     }
@@ -470,7 +471,7 @@ export function ProfilePage() {
       );
       setFollowersList(followers.filter(u => u !== null) as User[]);
     } catch (error) {
-      console.error('Error loading followers:', error);
+      logger.error('Error loading followers:', error);
     } finally {
       setIsFollowListLoading(false);
     }
@@ -489,7 +490,7 @@ export function ProfilePage() {
       );
       setFollowingList(following.filter(u => u !== null) as User[]);
     } catch (error) {
-      console.error('Error loading following:', error);
+      logger.error('Error loading following:', error);
     } finally {
       setIsFollowListLoading(false);
     }
@@ -525,11 +526,11 @@ export function ProfilePage() {
             (user.crossLikeMode === 'notka_to_spotify' || user.crossLikeMode === 'both')) {
           const success = await addTrackToSpotifyLikes(scrobble.trackId);
           if (success) {
-            console.log('🔄 Auto-liked in Spotify (Profile sync)');
+            logger.log('🔄 Auto-liked in Spotify (Profile sync)');
           }
         }
       } catch (err) {
-        console.error('Cross-like sync error:', err);
+        logger.error('Cross-like sync error:', err);
       }
     }
   }, [spotifyId, currentUser, avatarUrl]);
@@ -562,11 +563,11 @@ export function ProfilePage() {
             (user.crossLikeMode === 'notka_to_spotify' || user.crossLikeMode === 'both')) {
           const success = await removeTrackFromSpotifyLikes(scrobble.trackId);
           if (success) {
-            console.log('🔄 Auto-unliked in Spotify (Profile sync)');
+            logger.log('🔄 Auto-unliked in Spotify (Profile sync)');
           }
         }
       } catch (err) {
-        console.error('Cross-unlike sync error:', err);
+        logger.error('Cross-unlike sync error:', err);
       }
     }
   }, [spotifyId, tracksMode, currentScrobbles, likedScrobbles]);
@@ -651,7 +652,7 @@ export function ProfilePage() {
           }
         }
       } catch (error) {
-        console.error('Error loading album info:', error);
+        logger.error('Error loading album info:', error);
       }
     }
 
