@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentlyPlaying, isTrackLiked } from '../services/spotify';
-import { updateCurrentTrack, addScrobble, getLastUserScrobble } from '../services/firebase';
+import { getCurrentlyPlaying, isTrackLiked, getTrackLikedDate } from '../services/spotify';
+import { updateCurrentTrack, addScrobble, getLastUserScrobble, getUser, likeScrobble } from '../services/firebase';
 import { SpotifyCurrentlyPlaying, Scrobble, SpotifyTrack } from '../types';
 import { useAuth } from './useAuth';
+import { logger } from '../utils/logger';
 
 // Adaptive polling intervals
 const POLL_INTERVAL_PLAYING = 10000; // 10 seconds when music is playing
@@ -86,7 +87,7 @@ export function useScrobbler(): UseScrobblerReturn {
           POLL_INTERVAL_ERROR * Math.pow(BACKOFF_MULTIPLIER, globalState.consecutiveErrors - 1),
           MAX_BACKOFF_TIME
         );
-        console.log(`Backoff: ${backoff / 1000}s (${globalState.consecutiveErrors} errors)`);
+        logger.log(`Backoff: ${backoff / 1000}s (${globalState.consecutiveErrors} errors)`);
         return backoff;
       }
       return POLL_INTERVAL_ERROR;
@@ -96,7 +97,7 @@ export function useScrobbler(): UseScrobblerReturn {
     if (globalState.consecutiveErrors > 0) {
       globalState.consecutiveErrors = 0;
       globalState.backoffTime = 0;
-      console.log('Backoff reset - connection restored');
+      logger.log('Backoff reset - connection restored');
     }
 
     // Adaptive polling based on playback state
@@ -116,10 +117,10 @@ export function useScrobbler(): UseScrobblerReturn {
         if (lastScrobbleData && lastScrobbleData.trackId) {
           globalState.lastScrobbledTrackId = lastScrobbleData.trackId;
           globalState.lastScrobbledTime = lastScrobbleData.timestamp.getTime();
-          console.log('📚 Loaded last scrobble:', lastScrobbleData.title);
+          logger.log('📚 Loaded last scrobble:', lastScrobbleData.title);
         }
       } catch (e) {
-        console.error('Failed to load last scrobble:', e);
+        logger.error('Failed to load last scrobble:', e);
       } finally {
         globalState.lastScrobbleLoaded = true;
         setLastScrobbleLoaded(true);
@@ -152,7 +153,7 @@ export function useScrobbler(): UseScrobblerReturn {
     if (globalState.lastScrobbledTrackId === session.trackId) {
       const timeSince = Date.now() - globalState.lastScrobbledTime;
       if (timeSince < 3 * 60 * 1000) {
-        console.log(`⏭ Skip duplicate: ${session.track.name}`);
+        logger.log(`⏭ Skip duplicate: ${session.track.name}`);
         return false;
       }
     }
@@ -166,7 +167,7 @@ export function useScrobbler(): UseScrobblerReturn {
       try {
         isLikedOnSpotify = await isTrackLiked(session.trackId);
       } catch (e) {
-        console.log('Could not check Spotify like status:', e);
+        logger.log('Could not check Spotify like status:', e);
       }
       
       const scrobble: Omit<Scrobble, 'id'> = {
@@ -184,19 +185,50 @@ export function useScrobbler(): UseScrobblerReturn {
       };
 
       const id = await addScrobble(scrobble);
-      
+
       if (id) {
         globalState.lastScrobbledTrackId = session.trackId;
         globalState.lastScrobbledTime = Date.now();
         setLastScrobble({ ...scrobble, id });
-        
+
+        // Cross-like sync: Spotify → Notka (only for new likes)
+        if (isLikedOnSpotify) {
+          try {
+            const user = await getUser(spotifyId);
+            if (user?.crossLikeEnabled &&
+                (user.crossLikeMode === 'spotify_to_notka' || user.crossLikeMode === 'both')) {
+
+              // Check when track was added to Spotify Liked Songs
+              const likedDate = await getTrackLikedDate(session.trackId);
+              const syncStartedAt = user.crossLikeSyncStartedAt;
+
+              // Only auto-like if track was added AFTER sync was enabled
+              if (likedDate && syncStartedAt && likedDate >= syncStartedAt) {
+                await likeScrobble({ ...scrobble, id }, {
+                  odl: spotifyId,
+                  name: user.name,
+                  avatar: user.avatarURL
+                });
+                logger.log('🔄 Auto-liked in Notka (Spotify sync - new like)');
+              } else if (!syncStartedAt) {
+                // Backward compatibility: if no sync start date, don't sync old likes
+                logger.log('⏭ Skipped old like (sync started before timestamp tracking)');
+              } else {
+                logger.log('⏭ Skipped old like (added before sync was enabled)');
+              }
+            }
+          } catch (err) {
+            logger.error('Cross-like sync error:', err);
+          }
+        }
+
         const dur = Math.round(session.track.duration_ms / 1000);
         const likeIcon = isLikedOnSpotify ? ' 💚' : '';
-        console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`);
+        logger.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`);
         return true;
       }
     } catch (err) {
-      console.error('Scrobble error:', err);
+      logger.error('Scrobble error:', err);
       setError(err instanceof Error ? err.message : 'Scrobble failed');
     } finally {
       globalState.isScrobbling = false;
@@ -237,7 +269,7 @@ export function useScrobbler(): UseScrobblerReturn {
         if (globalState.currentSession) {
           await updateCurrentTrack(spotifyId, null);
           globalState.currentSession = null;
-          console.log('⏸ Playback stopped');
+          logger.log('⏸ Playback stopped');
         }
         return;
       }
@@ -282,7 +314,7 @@ export function useScrobbler(): UseScrobblerReturn {
         const dur = Math.round(track.duration_ms / 1000);
         const scrobAt = Math.round(threshold / 1000);
         const status = wasAlreadyScrobbled ? '(already scrobbled)' : '';
-        console.log(`▶ Now: ${track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}, scrobble@${scrobAt}s) ${status}`);
+        logger.log(`▶ Now: ${track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}, scrobble@${scrobAt}s) ${status}`);
         return;
       }
 
@@ -307,10 +339,10 @@ export function useScrobbler(): UseScrobblerReturn {
       const newInterval = calculatePollInterval(isPlaying, false);
       if (newInterval !== pollInterval) {
         setPollInterval(newInterval);
-        console.log(`Poll interval: ${isPlaying ? 'playing' : 'paused'} (${newInterval / 1000}s)`);
+        logger.log(`Poll interval: ${isPlaying ? 'playing' : 'paused'} (${newInterval / 1000}s)`);
       }
     } catch (err) {
-      console.error('Scrobbler error:', err);
+      logger.error('Scrobbler error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
 
       // Track consecutive errors for exponential backoff
@@ -353,7 +385,7 @@ export function useScrobbler(): UseScrobblerReturn {
       clearInterval(intervalRef.current);
     }
     intervalRef.current = setInterval(checkPlayback, pollInterval);
-    console.log(`Polling started: ${pollInterval / 1000}s interval`);
+    logger.log(`Polling started: ${pollInterval / 1000}s interval`);
 
     return () => {
       if (intervalRef.current) {

@@ -2,45 +2,59 @@ import { useState, useEffect } from 'react';
 import { Switch, RadioGroup, Radio, Button } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
 import { Moon, Sun, Globe, ChevronDown, ChevronUp, ArrowRightFromSquare, Heart } from '@gravity-ui/icons';
+import { deleteField } from 'firebase/firestore';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n, Language } from '../hooks/useI18n';
 import { useAuth } from '../hooks/useAuth';
-import { getUser, createOrUpdateUser } from '../services/firebase';
+import { createOrUpdateUser } from '../services/firebase';
 
-type CrossLikeMode = 'spotify_to_notka' | 'notka_to_spotify' | 'both' | 'none';
+type CrossLikeMode = 'spotify_to_notka' | 'notka_to_spotify' | 'both';
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { t, lang, setLang } = useI18n();
-  const { logout, spotifyId, refreshUser } = useAuth();
+  const { logout, spotifyId, refreshUser, user: authUser } = useAuth();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isLikesOpen, setIsLikesOpen] = useState(false);
-  const [crossLikeEnabled, setCrossLikeEnabled] = useState(true);
-  const [crossLikeMode, setCrossLikeMode] = useState<CrossLikeMode>('spotify_to_notka');
+
+  // Initialize from authUser to avoid race condition
+  const [crossLikeEnabled, setCrossLikeEnabled] = useState(authUser?.crossLikeEnabled ?? true);
+  const [crossLikeMode, setCrossLikeMode] = useState<CrossLikeMode>(
+    authUser?.crossLikeMode && authUser.crossLikeMode !== 'none'
+      ? (authUser.crossLikeMode as CrossLikeMode)
+      : 'spotify_to_notka'
+  );
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load user settings
+  // Update state when authUser changes
   useEffect(() => {
-    const loadSettings = async () => {
-      if (!spotifyId) return;
-      const user = await getUser(spotifyId);
-      if (user) {
-        setCrossLikeEnabled(user.crossLikeEnabled ?? true);
-        setCrossLikeMode(user.crossLikeMode ?? 'spotify_to_notka');
-      }
-    };
-    loadSettings();
-  }, [spotifyId]);
+    if (authUser) {
+      setCrossLikeEnabled(authUser.crossLikeEnabled ?? true);
+      const mode = authUser.crossLikeMode === 'none' ? 'spotify_to_notka' : (authUser.crossLikeMode ?? 'spotify_to_notka');
+      setCrossLikeMode(mode as CrossLikeMode);
+    }
+  }, [authUser]);
 
   const handleCrossLikeEnabledChange = async (enabled: boolean) => {
     setCrossLikeEnabled(enabled);
     if (!spotifyId) return;
-    
+
     setIsSaving(true);
-    await createOrUpdateUser({
+    const updates: any = {
       odl: spotifyId,
       crossLikeEnabled: enabled
-    });
+    };
+
+    // Set sync start timestamp when enabling sync
+    if (enabled) {
+      updates.crossLikeSyncStartedAt = new Date();
+    } else {
+      // Clear crossLikeMode and timestamp when disabling sync
+      updates.crossLikeMode = deleteField();
+      updates.crossLikeSyncStartedAt = deleteField();
+    }
+
+    await createOrUpdateUser(updates);
     await refreshUser();
     setIsSaving(false);
   };
@@ -66,23 +80,19 @@ export function SettingsPage() {
   const crossLikeModeLabels = {
     spotify_to_notka: lang === 'ru' ? 'Из Spotify в Notka' : 'From Spotify to Notka',
     notka_to_spotify: lang === 'ru' ? 'Из Notka в Spotify' : 'From Notka to Spotify',
-    both: lang === 'ru' ? 'Двусторонняя синхронизация' : 'Two-way sync',
-    none: lang === 'ru' ? 'Без синхронизации' : 'No sync'
+    both: lang === 'ru' ? 'Двусторонняя синхронизация' : 'Two-way sync'
   };
 
   const crossLikeModeDescriptions = {
-    spotify_to_notka: lang === 'ru' 
-      ? 'Лайки из Spotify будут автоматически добавляться в Notka' 
+    spotify_to_notka: lang === 'ru'
+      ? 'Лайки из Spotify будут автоматически добавляться в Notka'
       : 'Likes from Spotify will be automatically added to Notka',
-    notka_to_spotify: lang === 'ru' 
-      ? 'Лайки в Notka будут добавляться в вашу библиотеку Spotify' 
+    notka_to_spotify: lang === 'ru'
+      ? 'Лайки в Notka будут добавляться в вашу библиотеку Spotify'
       : 'Likes in Notka will be added to your Spotify library',
-    both: lang === 'ru' 
-      ? 'Лайки синхронизируются в обоих направлениях' 
-      : 'Likes sync in both directions',
-    none: lang === 'ru' 
-      ? 'Лайки в Notka и Spotify независимы друг от друга' 
-      : 'Likes in Notka and Spotify are independent'
+    both: lang === 'ru'
+      ? 'Лайки синхронизируются в обоих направлениях'
+      : 'Likes sync in both directions'
   };
 
   return (
@@ -184,15 +194,15 @@ export function SettingsPage() {
                   direction="vertical"
                   disabled={isSaving}
                 >
-                  {(['spotify_to_notka', 'notka_to_spotify', 'both', 'none'] as CrossLikeMode[]).map(mode => (
+                  {(['spotify_to_notka', 'notka_to_spotify', 'both'] as CrossLikeMode[]).map(mode => (
                     <Radio key={mode} value={mode}>
                       <div className="cross-like-option">
-                          <span className="cross-like-label">{crossLikeModeLabels[mode]}</span>
-                          <span className="cross-like-description">{crossLikeModeDescriptions[mode]}</span>
-                        </div>
-                      </Radio>
-                    ))}
-                  </RadioGroup>
+                        <span className="cross-like-label">{crossLikeModeLabels[mode]}</span>
+                        <span className="cross-like-description">{crossLikeModeDescriptions[mode]}</span>
+                      </div>
+                    </Radio>
+                  ))}
+                </RadioGroup>
                 </div>
               )}
             </div>

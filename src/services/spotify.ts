@@ -1,4 +1,5 @@
-import { SpotifyTokens, SpotifyCurrentlyPlaying } from '../types';
+import { SpotifyTokens, SpotifyCurrentlyPlaying, SpotifyTrack } from '../types';
+import { logger } from '../utils/logger';
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI = import.meta.env.PROD
@@ -180,19 +181,19 @@ export async function getCurrentlyPlaying(): Promise<SpotifyCurrentlyPlaying | n
   if (response.status === 429) {
     const retryAfter = response.headers.get('Retry-After');
     const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000; // Default 60s
-    console.warn(`Spotify API rate limited. Retry after ${waitTime / 1000}s`);
+    logger.warn(`Spotify API rate limited. Retry after ${waitTime / 1000}s`);
     throw new Error(`RATE_LIMITED:${waitTime}`);
   }
 
   // Handle other errors
   if (response.status === 401) {
     // Token expired, will be refreshed by getValidAccessToken
-    console.log('Token expired, refreshing...');
+    logger.log('Token expired, refreshing...');
     return null;
   }
 
   if (!response.ok) {
-    console.error(`Spotify API error: ${response.status} ${response.statusText}`);
+    logger.error(`Spotify API error: ${response.status} ${response.statusText}`);
     return null;
   }
 
@@ -280,7 +281,7 @@ export async function getArtistImage(artistName: string): Promise<string | null>
     
     return imageUrl;
   } catch (error) {
-    console.error('Error fetching artist image:', error);
+    logger.error('Error fetching artist image:', error);
     artistImageCache.set(normalizedName, null);
     return null;
   }
@@ -318,7 +319,7 @@ export async function getArtistById(artistId: string): Promise<SpotifyArtist | n
     if (!response.ok) return null;
     return response.json();
   } catch (error) {
-    console.error('Error fetching artist by ID:', error);
+    logger.error('Error fetching artist by ID:', error);
     return null;
   }
 }
@@ -348,11 +349,106 @@ export async function getArtistsByIds(artistIds: string[]): Promise<Map<string, 
         }
       }
     } catch (error) {
-      console.error('Error fetching artists by IDs:', error);
+      logger.error('Error fetching artists by IDs:', error);
     }
   }
   
   return results;
+}
+
+// ============================================
+// SPOTIFY ALBUM INFO
+// ============================================
+
+export interface SpotifyAlbumInfo {
+  id: string;
+  name: string;
+  artists: { id: string; name: string }[];
+  release_date: string;
+  release_date_precision: string;
+  genres: string[];
+  label: string;
+  total_tracks: number;
+  images: { url: string; width: number; height: number }[];
+}
+
+/**
+ * Get track information to extract album ID
+ */
+export async function getTrackInfo(trackId: string): Promise<SpotifyTrack | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/tracks/${trackId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    logger.error('Error fetching track info:', error);
+    return null;
+  }
+}
+
+/**
+ * Get album information from Spotify (genres from artist, release date, etc.)
+ */
+export async function getAlbumInfo(albumId: string): Promise<SpotifyAlbumInfo | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/albums/${albumId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!response.ok) return null;
+    const albumData = await response.json();
+
+    // Spotify albums don't have genres, but artists do
+    // Fetch genres from the primary artist
+    let genres: string[] = [];
+    if (albumData.artists?.[0]?.id) {
+      const artistData = await getArtistById(albumData.artists[0].id);
+      if (artistData?.genres) {
+        genres = artistData.genres;
+      }
+    }
+
+    return {
+      ...albumData,
+      genres
+    };
+  } catch (error) {
+    logger.error('Error fetching album info:', error);
+    return null;
+  }
+}
+
+/**
+ * Get album tracks from Spotify
+ */
+export async function getAlbumTracks(albumId: string): Promise<SpotifyTrack[]> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=50`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.items || [];
+  } catch (error) {
+    logger.error('Error fetching album tracks:', error);
+    return [];
+  }
 }
 
 // ============================================
@@ -386,7 +482,7 @@ export async function checkTracksLiked(trackIds: string[]): Promise<Map<string, 
         });
       }
     } catch (error) {
-      console.error('Error checking liked tracks:', error);
+      logger.error('Error checking liked tracks:', error);
     }
   }
   
@@ -425,7 +521,7 @@ export async function addTrackToSpotifyLikes(trackId: string): Promise<boolean> 
     
     return response.ok;
   } catch (error) {
-    console.error('Error adding track to Spotify likes:', error);
+    logger.error('Error adding track to Spotify likes:', error);
     return false;
   }
 }
@@ -436,7 +532,7 @@ export async function addTrackToSpotifyLikes(trackId: string): Promise<boolean> 
 export async function removeTrackFromSpotifyLikes(trackId: string): Promise<boolean> {
   const tokens = getTokens();
   if (!tokens) return false;
-  
+
   try {
     const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
       method: 'DELETE',
@@ -445,16 +541,164 @@ export async function removeTrackFromSpotifyLikes(trackId: string): Promise<bool
         'Content-Type': 'application/json'
       }
     });
-    
+
     if (response.status === 401) {
       const refreshed = await refreshAccessToken();
       if (!refreshed) return false;
       return removeTrackFromSpotifyLikes(trackId);
     }
-    
+
     return response.ok;
   } catch (error) {
-    console.error('Error removing track from Spotify likes:', error);
+    logger.error('Error removing track from Spotify likes:', error);
     return false;
   }
 }
+
+/**
+ * Get when track was added to Spotify Liked Songs
+ * Returns Date if track is liked, null if not liked or error
+ */
+export async function getTrackLikedDate(trackId: string): Promise<Date | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data.items && data.items.length > 0 && data.items[0].added_at) {
+      return new Date(data.items[0].added_at);
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('Error getting track liked date:', error);
+    return null;
+  }
+}
+
+/**
+ * Get recently liked tracks from Spotify
+ * Returns list of tracks with their added_at dates
+ */
+export async function getRecentLikedTracks(limit = 20): Promise<Array<{ added_at: Date; track: SpotifyTrack }>> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/me/tracks?limit=${limit}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    return (data.items || []).map((item: any) => ({
+      added_at: new Date(item.added_at),
+      track: item.track
+    }));
+  } catch (error) {
+    logger.error('Error getting recent liked tracks:', error);
+    return [];
+  }
+}
+
+/**
+ * Get track details from Spotify
+ */
+export async function getTrackDetails(trackId: string): Promise<any | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/tracks/${trackId}`,
+      {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    logger.error('Error getting track details:', error);
+    return null;
+  }
+}
+
+/**
+ * Get albums where this track appears
+ */
+export async function getTrackAlbums(_trackId: string, artistId: string): Promise<any[]> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    // Get all albums from the artist
+    const response = await fetch(
+      `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album,single,compilation&limit=50`,
+      {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const albums = data.items || [];
+
+    // Filter albums that contain this track
+    // Note: For efficiency, we're returning all albums from the artist
+    // TODO: In production, check each album's tracks to verify the track appears
+    return albums;
+  } catch (error) {
+    logger.error('Error getting track albums:', error);
+    return [];
+  }
+}
+
+/**
+ * Get similar/recommended tracks based on a track
+ */
+export async function getSimilarTracks(trackId: string): Promise<any[]> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/recommendations?seed_tracks=${trackId}&limit=10`,
+      {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    return data.tracks || [];
+  } catch (error) {
+    logger.error('Error getting similar tracks:', error);
+    return [];
+  }
+}
+

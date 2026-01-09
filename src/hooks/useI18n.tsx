@@ -18,12 +18,16 @@ interface Translations {
   noFollowingScrobbles: string;
   followSomeone: string;
   
-  // Users
+  // Users / Discovery
   listenersTitle: string;
   noListeners: string;
   inviteFriends: string;
   sendLink: string;
   offline: string;
+  discoveryTitle: string;
+  discoverySubtitle: string;
+  noActiveUsers: string;
+  comeBackLater: string;
   
   // Profile
   scrobbles: string;
@@ -60,6 +64,14 @@ interface Translations {
   signInSpotify: string;
   comingSoon: string;
   loginHint: string;
+
+  // Toasts/Notifications
+  errorOccurred: string;
+  somethingWrong: string;
+  welcomeToNotka: string;
+  liked: string;
+  failedToLike: string;
+  failedToUnlike: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -79,12 +91,16 @@ const translations: Record<Language, Translations> = {
     noFollowingScrobbles: 'Нет скробблов от подписок',
     followSomeone: 'Подпишись на кого-нибудь в разделе "Слушатели"',
     
-    // Users
+    // Users / Discovery
     listenersTitle: 'Слушатели',
     noListeners: 'Пока никого нет. Пригласи друзей!',
     inviteFriends: 'Пригласи друзей!',
     sendLink: 'Отправь им ссылку',
     offline: 'Не в сети',
+    discoveryTitle: 'Активные',
+    discoverySubtitle: 'Пользователи, которые слушают музыку прямо сейчас',
+    noActiveUsers: 'Никого нет в сети',
+    comeBackLater: 'Загляни позже',
     
     // Profile
     scrobbles: 'скробблов',
@@ -121,6 +137,14 @@ const translations: Record<Language, Translations> = {
     signInSpotify: 'Войти со Spotify',
     comingSoon: 'Скоро',
     loginHint: 'Apple Music и Яндекс Музыка в разработке. Вход через Spotify недоступен из России без VPN.',
+
+    // Toasts/Notifications
+    errorOccurred: 'Произошла ошибка',
+    somethingWrong: 'Что-то пошло не так. Пожалуйста, обнови страницу.',
+    welcomeToNotka: 'Добро пожаловать в Notka! 🎵 Включи музыку в Spotify, чтобы начать скробблинг.',
+    liked: 'Понравилось!',
+    failedToLike: 'Не удалось добавить в избранное',
+    failedToUnlike: 'Не удалось убрать из избранного',
   },
   en: {
     // Navigation
@@ -138,12 +162,16 @@ const translations: Record<Language, Translations> = {
     noFollowingScrobbles: 'No scrobbles from following',
     followSomeone: 'Follow someone in the "Listeners" section',
     
-    // Users
+    // Users / Discovery
     listenersTitle: 'Listeners',
     noListeners: 'No one here yet. Invite friends!',
     inviteFriends: 'Invite friends!',
     sendLink: 'Send them link',
     offline: 'Offline',
+    discoveryTitle: 'Discovery',
+    discoverySubtitle: 'Active users in the last 24 hours',
+    noActiveUsers: 'No active users yet',
+    comeBackLater: 'Come back later when more people are listening',
     
     // Profile
     scrobbles: 'scrobbles',
@@ -180,6 +208,14 @@ const translations: Record<Language, Translations> = {
     signInSpotify: 'Sign in with Spotify',
     comingSoon: 'Coming soon',
     loginHint: 'Apple Music and Yandex Music are coming soon. Spotify login is not available from Russia without VPN.',
+
+    // Toasts/Notifications
+    errorOccurred: 'An error occurred',
+    somethingWrong: 'Something went wrong. Please refresh the page.',
+    welcomeToNotka: 'Welcome to Notka! 🎵 Play music on Spotify to start scrobbling.',
+    liked: 'Liked!',
+    failedToLike: 'Failed to like',
+    failedToUnlike: 'Failed to unlike',
   }
 };
 
