@@ -9,10 +9,26 @@ export interface User {
   lastUpdated?: Date;
   currentTrack?: CurrentTrack;
   scrobblesCount?: number; // Total scrobbles count (incremented on each scrobble)
+  topArtists?: TopArtist[]; // Top artists (updated by Cloud Function)
+  topAlbums?: TopAlbum[]; // Top albums (updated by Cloud Function)
   // Cross-like settings
   crossLikeEnabled?: boolean; // Master toggle for cross-likes
   crossLikeMode?: 'spotify_to_notka' | 'notka_to_spotify' | 'both' | 'none';
   crossLikeSyncStartedAt?: Date; // When sync was enabled (for filtering old likes)
+}
+
+export interface TopArtist {
+  name: string;
+  artistId?: string;
+  count: number;
+  imageUrl?: string;
+}
+
+export interface TopAlbum {
+  name: string;
+  artist: string;
+  count: number;
+  imageUrl?: string;
 }
 
 export interface CurrentTrack {

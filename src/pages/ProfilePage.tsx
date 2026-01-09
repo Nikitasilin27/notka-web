@@ -217,62 +217,70 @@ export function ProfilePage() {
       setUser(userData);
       setAllScrobbles(scrobblesData);
       setFollowCounts(counts);
-      
-      // Calculate top artists (store artistId for accurate image fetching)
-      const artistMap = new Map<string, { count: number; artistId?: string; albumArtUrl?: string }>();
-      scrobblesData.forEach(scrobble => {
-        const normalizedName = normalizeArtistName(scrobble.artist);
-        const existing = artistMap.get(normalizedName);
-        if (existing) {
-          existing.count++;
-          // Prefer artistId if available
-          if (!existing.artistId && scrobble.artistId) {
-            existing.artistId = scrobble.artistId;
+
+      // Use pre-computed stats from Firestore if available, otherwise calculate (fallback)
+      let topArtistsList: TopArtist[];
+      let topAlbumsList: TopAlbum[];
+
+      if (userData?.topArtists && userData.topArtists.length > 0) {
+        // Use pre-computed stats from Cloud Function
+        topArtistsList = userData.topArtists.slice(0, 8);
+        topAlbumsList = (userData.topAlbums || []).slice(0, 8);
+      } else {
+        // Fallback: Calculate on client (for old users without stats)
+        const artistMap = new Map<string, { count: number; artistId?: string; albumArtUrl?: string }>();
+        scrobblesData.forEach(scrobble => {
+          const normalizedName = normalizeArtistName(scrobble.artist);
+          const existing = artistMap.get(normalizedName);
+          if (existing) {
+            existing.count++;
+            if (!existing.artistId && scrobble.artistId) {
+              existing.artistId = scrobble.artistId;
+            }
+          } else {
+            artistMap.set(normalizedName, {
+              count: 1,
+              artistId: scrobble.artistId,
+              albumArtUrl: scrobble.albumArtURL
+            });
           }
-        } else {
-          artistMap.set(normalizedName, { 
-            count: 1, 
-            artistId: scrobble.artistId,
-            albumArtUrl: scrobble.albumArtURL 
-          });
-        }
-      });
-      
-      const topArtistsList: TopArtist[] = Array.from(artistMap.entries())
-        .map(([name, data]) => ({ 
-          name, 
-          artistId: data.artistId,
-          count: data.count, 
-          imageUrl: data.albumArtUrl 
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 8);
-      
-      // Calculate top albums
-      const albumMap = new Map<string, { artist: string; count: number; imageUrl?: string }>();
-      scrobblesData.forEach(scrobble => {
-        const key = `${scrobble.album}|||${normalizeArtistName(scrobble.artist)}`;
-        const existing = albumMap.get(key);
-        if (existing) {
-          existing.count++;
-        } else {
-          albumMap.set(key, {
-            artist: normalizeArtistName(scrobble.artist),
-            count: 1,
-            imageUrl: scrobble.albumArtURL
-          });
-        }
-      });
-      
-      const topAlbumsList = Array.from(albumMap.entries())
-        .map(([key, data]) => ({
-          name: key.split('|||')[0],
-          artist: data.artist,
-          count: data.count,
-          imageUrl: data.imageUrl
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 8);
+        });
+
+        topArtistsList = Array.from(artistMap.entries())
+          .map(([name, data]) => ({
+            name,
+            artistId: data.artistId,
+            count: data.count,
+            imageUrl: data.albumArtUrl
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 8);
+
+        const albumMap = new Map<string, { artist: string; count: number; imageUrl?: string }>();
+        scrobblesData.forEach(scrobble => {
+          const key = `${scrobble.album}|||${normalizeArtistName(scrobble.artist)}`;
+          const existing = albumMap.get(key);
+          if (existing) {
+            existing.count++;
+          } else {
+            albumMap.set(key, {
+              artist: normalizeArtistName(scrobble.artist),
+              count: 1,
+              imageUrl: scrobble.albumArtURL
+            });
+          }
+        });
+
+        topAlbumsList = Array.from(albumMap.entries())
+          .map(([key, data]) => ({
+            name: key.split('|||')[0],
+            artist: data.artist,
+            count: data.count,
+            imageUrl: data.imageUrl
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 8);
+      }
       
       // Fetch artist images - prefer by ID, fallback to name search
       try {
