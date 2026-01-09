@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { logger } from '../utils/logger';
 import { useParams } from 'react-router-dom';
 import { Loader, Button, Dialog, Pagination, Avatar, Progress, Skeleton, TextInput, SegmentedRadioGroup, Label } from '@gravity-ui/uikit';
 import { Icon } from '@gravity-ui/uikit';
@@ -751,7 +750,7 @@ export function ProfilePage() {
       (Date.now() - new Date(currentTrack.timestamp).getTime()) < 10 * 60 * 1000; // Within 10 min
 
   const stats = {
-    scrobbles: allScrobbles.length,
+    scrobbles: user?.scrobblesCount || allScrobbles.length,
     artists: new Set(allScrobbles.map(s => normalizeArtistName(s.artist))).size,
     tracks: new Set(allScrobbles.map(s => `${normalizeArtistName(s.artist)}-${s.title}`)).size
   };

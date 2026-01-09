@@ -13,7 +13,8 @@ import {
   Timestamp,
   addDoc,
   writeBatch,
-  onSnapshot
+  onSnapshot,
+  increment
 } from 'firebase/firestore';
 import { signInWithCustomToken, signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
@@ -256,7 +257,18 @@ export async function addScrobble(scrobble: Omit<Scrobble, 'id'>): Promise<strin
   if (scrobble.albumArtURL) scrobbleData.albumArtURL = scrobble.albumArtURL;
   
   const docRef = await addDoc(scrobblesRef, scrobbleData);
-  
+
+  // Increment user's scrobbles count
+  try {
+    const userRef = doc(db, 'users', odl);
+    await updateDoc(userRef, {
+      scrobblesCount: increment(1)
+    });
+  } catch (error) {
+    logger.error('Error incrementing scrobbles count:', error);
+    // Don't fail the scrobble if counter update fails
+  }
+
   logger.log('✓ Scrobbled:', scrobble.title);
   return docRef.id;
 }

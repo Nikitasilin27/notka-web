@@ -8,6 +8,7 @@ export interface User {
   longitude?: number;
   lastUpdated?: Date;
   currentTrack?: CurrentTrack;
+  scrobblesCount?: number; // Total scrobbles count (incremented on each scrobble)
   // Cross-like settings
   crossLikeEnabled?: boolean; // Master toggle for cross-likes
   crossLikeMode?: 'spotify_to_notka' | 'notka_to_spotify' | 'both' | 'none';

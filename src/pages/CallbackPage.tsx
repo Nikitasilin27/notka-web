@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { logger } from '../utils/logger';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from '@gravity-ui/uikit';
 import { exchangeCodeForTokens } from '../services/spotify';
