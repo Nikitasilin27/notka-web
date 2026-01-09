@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onScrobbleCreated = exports.onSuggestionCreated = exports.onFollowCreated = exports.onLikeDeleted = exports.onLikeCreated = void 0;
+exports.migrateUserStats = exports.onScrobbleCreated = exports.onSuggestionCreated = exports.onFollowCreated = exports.onLikeDeleted = exports.onLikeCreated = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 admin.initializeApp();
@@ -191,6 +191,161 @@ exports.onScrobbleCreated = (0, firestore_1.onDocumentCreated)("scrobbles/{scrob
     }
     catch (error) {
         console.error("Error updating scrobble stats:", error);
+    }
+});
+// ============================================
+// MIGRATION: Recalculate stats for all users
+// ============================================
+const https_1 = require("firebase-functions/v2/https");
+exports.migrateUserStats = (0, https_1.onRequest)(async (req, res) => {
+    // Security: Only allow GET requests (can add auth later)
+    if (req.method !== "GET") {
+        res.status(405).send("Method not allowed");
+        return;
+    }
+    try {
+        console.log("🚀 Starting migration: recalculating stats for all users...");
+        // Get all scrobbles
+        const scrobblesSnapshot = await db.collection("scrobbles").get();
+        const scrobbles = scrobblesSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                odl: data.odl,
+                userId: data.userId,
+                artist: data.artist,
+                album: data.album,
+                artistId: data.artistId,
+                albumArtURL: data.albumArtURL
+            };
+        });
+        console.log(`📊 Found ${scrobbles.length} total scrobbles`);
+        const userScrobbles = new Map();
+        scrobbles.forEach(scrobble => {
+            const odl = scrobble.odl || scrobble.userId;
+            if (!odl)
+                return;
+            if (!userScrobbles.has(odl)) {
+                userScrobbles.set(odl, []);
+            }
+            userScrobbles.get(odl).push(scrobble);
+        });
+        console.log(`👥 Found ${userScrobbles.size} users with scrobbles`);
+        // Process each user
+        const results = [];
+        for (const [odl, userScrobblesList] of userScrobbles.entries()) {
+            try {
+                const userRef = db.collection("users").doc(odl);
+                const userDoc = await userRef.get();
+                if (!userDoc.exists) {
+                    console.log(`⚠️  User ${odl} not found, skipping`);
+                    continue;
+                }
+                // Calculate scrobbles count
+                const scrobblesCount = userScrobblesList.length;
+                // Calculate top artists
+                const artistMap = new Map();
+                userScrobblesList.forEach(scrobble => {
+                    const artist = scrobble.artist;
+                    if (!artist)
+                        return;
+                    const normalizedArtist = normalizeArtistName(artist);
+                    const existing = artistMap.get(normalizedArtist);
+                    if (existing) {
+                        existing.count++;
+                        // Update artistId if not present
+                        if (scrobble.artistId && !existing.artistId) {
+                            existing.artistId = scrobble.artistId;
+                        }
+                        // Update imageUrl if not present
+                        if (scrobble.albumArtURL && !existing.imageUrl) {
+                            existing.imageUrl = scrobble.albumArtURL;
+                        }
+                    }
+                    else {
+                        artistMap.set(normalizedArtist, {
+                            count: 1,
+                            artistId: scrobble.artistId || undefined,
+                            imageUrl: scrobble.albumArtURL || undefined
+                        });
+                    }
+                });
+                const topArtists = Array.from(artistMap.entries())
+                    .map(([name, data]) => ({
+                    name,
+                    artistId: data.artistId,
+                    count: data.count,
+                    imageUrl: data.imageUrl
+                }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 20);
+                // Calculate top albums
+                const albumMap = new Map();
+                userScrobblesList.forEach(scrobble => {
+                    const album = scrobble.album;
+                    const artist = scrobble.artist;
+                    if (!album || !artist)
+                        return;
+                    const normalizedArtist = normalizeArtistName(artist);
+                    const albumKey = `${album}|||${normalizedArtist}`;
+                    const existing = albumMap.get(albumKey);
+                    if (existing) {
+                        existing.count++;
+                        // Update imageUrl if not present
+                        if (scrobble.albumArtURL && !existing.imageUrl) {
+                            existing.imageUrl = scrobble.albumArtURL;
+                        }
+                    }
+                    else {
+                        albumMap.set(albumKey, {
+                            artist: normalizedArtist,
+                            count: 1,
+                            imageUrl: scrobble.albumArtURL || undefined
+                        });
+                    }
+                });
+                const topAlbums = Array.from(albumMap.entries())
+                    .map(([key, data]) => ({
+                    name: key.split("|||")[0],
+                    artist: data.artist,
+                    count: data.count,
+                    imageUrl: data.imageUrl
+                }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 20);
+                // Update user document
+                await userRef.update({
+                    scrobblesCount,
+                    topArtists,
+                    topAlbums
+                });
+                results.push({
+                    odl,
+                    scrobblesCount,
+                    topArtistsCount: topArtists.length,
+                    topAlbumsCount: topAlbums.length
+                });
+                console.log(`✅ ${odl}: ${scrobblesCount} scrobbles, ${topArtists.length} artists, ${topAlbums.length} albums`);
+            }
+            catch (error) {
+                console.error(`❌ Error processing user ${odl}:`, error);
+                results.push({ odl, error: String(error) });
+            }
+        }
+        console.log("🎉 Migration completed!");
+        res.json({
+            success: true,
+            message: "Migration completed successfully",
+            totalUsers: userScrobbles.size,
+            results
+        });
+    }
+    catch (error) {
+        console.error("❌ Migration failed:", error);
+        res.status(500).json({
+            success: false,
+            error: String(error)
+        });
     }
 });
 //# sourceMappingURL=index.js.map
