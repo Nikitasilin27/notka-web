@@ -145,12 +145,15 @@ exports.onScrobbleCreated = (0, firestore_1.onDocumentCreated)("scrobbles/{scrob
         }
         else {
             // New artist, add to list
-            topArtists.push({
+            const newArtist = {
                 name: normalizedArtist,
-                artistId: artistId || undefined,
                 count: 1,
-                imageUrl: albumArtURL || undefined,
-            });
+            };
+            if (artistId)
+                newArtist.artistId = artistId;
+            if (albumArtURL)
+                newArtist.imageUrl = albumArtURL;
+            topArtists.push(newArtist);
         }
         // Sort and keep top 20
         topArtists = topArtists
@@ -170,12 +173,14 @@ exports.onScrobbleCreated = (0, firestore_1.onDocumentCreated)("scrobbles/{scrob
             }
             else {
                 // New album, add to list
-                topAlbums.push({
+                const newAlbum = {
                     name: album,
                     artist: normalizedArtist,
                     count: 1,
-                    imageUrl: albumArtURL || undefined,
-                });
+                };
+                if (albumArtURL)
+                    newAlbum.imageUrl = albumArtURL;
+                topAlbums.push(newAlbum);
             }
             // Sort and keep top 20
             topAlbums = topAlbums
@@ -271,12 +276,17 @@ exports.migrateUserStats = (0, https_1.onRequest)(async (req, res) => {
                     }
                 });
                 const topArtists = Array.from(artistMap.entries())
-                    .map(([name, data]) => ({
-                    name,
-                    artistId: data.artistId,
-                    count: data.count,
-                    imageUrl: data.imageUrl
-                }))
+                    .map(([name, data]) => {
+                    const artist = {
+                        name,
+                        count: data.count,
+                    };
+                    if (data.artistId)
+                        artist.artistId = data.artistId;
+                    if (data.imageUrl)
+                        artist.imageUrl = data.imageUrl;
+                    return artist;
+                })
                     .sort((a, b) => b.count - a.count)
                     .slice(0, 20);
                 // Calculate top albums
@@ -305,12 +315,16 @@ exports.migrateUserStats = (0, https_1.onRequest)(async (req, res) => {
                     }
                 });
                 const topAlbums = Array.from(albumMap.entries())
-                    .map(([key, data]) => ({
-                    name: key.split("|||")[0],
-                    artist: data.artist,
-                    count: data.count,
-                    imageUrl: data.imageUrl
-                }))
+                    .map(([key, data]) => {
+                    const album = {
+                        name: key.split("|||")[0],
+                        artist: data.artist,
+                        count: data.count,
+                    };
+                    if (data.imageUrl)
+                        album.imageUrl = data.imageUrl;
+                    return album;
+                })
                     .sort((a, b) => b.count - a.count)
                     .slice(0, 20);
                 // Update user document

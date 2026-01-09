@@ -182,12 +182,13 @@ export const onScrobbleCreated = onDocumentCreated("scrobbles/{scrobbleId}", asy
       }
     } else {
       // New artist, add to list
-      topArtists.push({
+      const newArtist: any = {
         name: normalizedArtist,
-        artistId: artistId || undefined,
         count: 1,
-        imageUrl: albumArtURL || undefined,
-      });
+      };
+      if (artistId) newArtist.artistId = artistId;
+      if (albumArtURL) newArtist.imageUrl = albumArtURL;
+      topArtists.push(newArtist);
     }
 
     // Sort and keep top 20
@@ -211,12 +212,13 @@ export const onScrobbleCreated = onDocumentCreated("scrobbles/{scrobbleId}", asy
         }
       } else {
         // New album, add to list
-        topAlbums.push({
+        const newAlbum: any = {
           name: album,
           artist: normalizedArtist,
           count: 1,
-          imageUrl: albumArtURL || undefined,
-        });
+        };
+        if (albumArtURL) newAlbum.imageUrl = albumArtURL;
+        topAlbums.push(newAlbum);
       }
 
       // Sort and keep top 20
@@ -329,12 +331,15 @@ export const migrateUserStats = onRequest(async (req, res) => {
         });
 
         const topArtists: TopArtist[] = Array.from(artistMap.entries())
-          .map(([name, data]) => ({
-            name,
-            artistId: data.artistId,
-            count: data.count,
-            imageUrl: data.imageUrl
-          }))
+          .map(([name, data]) => {
+            const artist: any = {
+              name,
+              count: data.count,
+            };
+            if (data.artistId) artist.artistId = data.artistId;
+            if (data.imageUrl) artist.imageUrl = data.imageUrl;
+            return artist as TopArtist;
+          })
           .sort((a, b) => b.count - a.count)
           .slice(0, 20);
 
@@ -365,12 +370,15 @@ export const migrateUserStats = onRequest(async (req, res) => {
         });
 
         const topAlbums: TopAlbum[] = Array.from(albumMap.entries())
-          .map(([key, data]) => ({
-            name: key.split("|||")[0],
-            artist: data.artist,
-            count: data.count,
-            imageUrl: data.imageUrl
-          }))
+          .map(([key, data]) => {
+            const album: any = {
+              name: key.split("|||")[0],
+              artist: data.artist,
+              count: data.count,
+            };
+            if (data.imageUrl) album.imageUrl = data.imageUrl;
+            return album as TopAlbum;
+          })
           .sort((a, b) => b.count - a.count)
           .slice(0, 20);
 
