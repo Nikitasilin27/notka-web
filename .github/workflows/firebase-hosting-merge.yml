@@ -15,6 +15,6 @@ jobs:
       - uses: FirebaseExtended/action-hosting-deploy@v1
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP }}
+          firebaseToken: ${{ secrets.FIREBASE_TOKEN }}   # ← ИЗМЕНЕНО
           channelId: live
           projectId: notka-mvp
