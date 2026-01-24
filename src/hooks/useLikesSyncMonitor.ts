@@ -11,7 +11,7 @@ import { Scrobble } from '../types';
  */
 export function useLikesSyncMonitor() {
   const { spotifyId, user: authUser, avatarUrl } = useAuth();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCheckingRef = useRef(false);
 
   useEffect(() => {
@@ -30,8 +30,7 @@ export function useLikesSyncMonitor() {
         const user = await getUser(spotifyId);
 
         // Check if sync is enabled and direction is correct
-        if (!user?.crossLikeEnabled ||
-            user.crossLikeMode === 'notka_to_spotify') {
+        if (!user?.crossLikeEnabled || user.crossLikeMode === 'notka_to_spotify') {
           return; // Skip if sync disabled or wrong direction
         }
 
@@ -46,9 +45,7 @@ export function useLikesSyncMonitor() {
 
         // 2. Filter: only tracks added AFTER crossLikeSyncStartedAt
         const syncStartTime = user.crossLikeSyncStartedAt.getTime();
-        const newLikes = recentLikes.filter(like =>
-          like.added_at.getTime() >= syncStartTime
-        );
+        const newLikes = recentLikes.filter((like) => like.added_at.getTime() >= syncStartTime);
 
         if (newLikes.length === 0) {
           console.log('⏭ Sync monitor: No new likes since', user.crossLikeSyncStartedAt);
@@ -66,19 +63,19 @@ export function useLikesSyncMonitor() {
             id: pseudoScrobbleId,
             odl: spotifyId,
             title: track.name,
-            artist: track.artists.map(a => a.name).join(', '),
+            artist: track.artists.map((a) => a.name).join(', '),
             trackId: track.id,
             artistId: track.artists[0]?.id,
             albumArtURL: track.album.images[0]?.url,
             timestamp: like.added_at,
-            isLikedOnSpotify: true
+            isLikedOnSpotify: true,
           };
 
           try {
             await likeScrobble(pseudoScrobble, {
               odl: spotifyId,
               name: user.name,
-              avatar: avatarUrl || undefined
+              avatar: avatarUrl || undefined,
             });
 
             console.log('🔄 Sync monitor: Auto-liked in Notka:', track.name);
@@ -86,7 +83,6 @@ export function useLikesSyncMonitor() {
             console.error('Sync monitor error for track:', track.name, err);
           }
         }
-
       } catch (error) {
         console.error('Sync monitor error:', error);
       } finally {
