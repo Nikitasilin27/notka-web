@@ -1,124 +1,264 @@
 #  Настройка GitHub Secrets
 
-##  Проблема
-
-CI/CD пайплайн падает потому что **GitHub Actions не имеет доступа к переменным окружения** (API ключи Firebase, Spotify) и **Firebase Service Account** для деплоя.
-
-Когда код пушится на GitHub, сервер GitHub пытает собрать и задеплоить проект, но у него нет:
-1. Твоего `.env` файла — он не коммитится (и правильно, это секреты!)
-2. Firebase Service Account ключа для авторизации деплоя
+> **Время:** ~5 минут  
+> **Сложность:** Легко, просто копируй-вставляй
 
 ---
 
-##  Что нужно сделать
+##  Что случилось?
 
-### Шаг 1: Открой настройки репозитория
-
-Перейди сюда:
-**https://github.com/Nikitasilin27/notka-web/settings/secrets/actions**
-
-Или: Repository  Settings  Secrets and variables  Actions
-
----
-
-### Шаг 2: Добавь Firebase Service Account (ОБЯЗАТЕЛЬНО!)
-
-Это **самый важный** секрет — без него деплой не работает!
-
-**Название секрета:** `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP`
-
-**Как получить значение:**
-
-1. Открой [Firebase Console](https://console.firebase.google.com/)
-2. Выбери проект **notka-mvp**
-3. Перейди: Project Settings (шестерёнка)  Service accounts
-4. Нажми **"Generate new private key"**
-5. Скачается JSON файл — **скопируй ВЕСЬ его контент**
-6. Вставь в поле Value секрета на GitHub
-
-> Важно: Вставь весь JSON как есть, включая фигурные скобки `{ ... }`
-
----
-
-### Шаг 3: Добавь остальные секреты
-
-Нажми **"New repository secret"** и добавь каждый:
-
-| Название секрета | Откуда взять значение |
-|------------------|----------------------|
-| `VITE_FIREBASE_API_KEY` | Из твоего `.env` файла |
-| `VITE_FIREBASE_AUTH_DOMAIN` | `notka-mvp.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | `notka-mvp` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | `notka-mvp.firebasestorage.app` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Из `.env` |
-| `VITE_FIREBASE_APP_ID` | Из `.env` |
-| `VITE_SPOTIFY_CLIENT_ID` | Из `.env` |
-| `VITE_SPOTIFY_REDIRECT_URI_PROD` | `https://notka-mvp.web.app/callback` |
-
----
-
-### Шаг 4: Перезапусти workflow
-
-После добавления секретов:
-1. Перейди в **Actions**  выбери упавший workflow
-2. Нажми **"Re-run all jobs"**
-
-Или просто сделай любой коммит — workflow запустится автоматически.
-
----
-
-##  Почему это нужно
+GitHub Actions пытается задеплоить Notka на Firebase, но получает ошибку:
 
 ```
-Твой компьютер                  GitHub Actions
-┌─────────────────────────┐    ┌─────────────────────────┐
-│  .env файл с секретами │    │  GitHub Secrets        │
-│  Firebase CLI авториз. │    │  Service Account JSON  │
-│                         │    │                         │
-│ npm run build + deploy  │    │ npm run build + deploy  │
-└─────────────────────────┘    └─────────────────────────┘
+Error: Input required and not supplied: firebaseServiceAccount
 ```
 
-- **VITE_*** секреты — нужны для **сборки** (Vite заменяет `import.meta.env.*` на реальные значения)
-- **FIREBASE_SERVICE_ACCOUNT_*** — нужен для **деплоя** (авторизация в Firebase Hosting)
-
-GitHub Secrets — это безопасный способ передать секреты в CI/CD без коммита в код.
+**Причина:** GitHub не знает твои секретные ключи. Нужно их добавить вручную.
 
 ---
 
-##  Чеклист
+##  ЧАСТЬ 1: Firebase Service Account (ГЛАВНОЕ!)
 
-- [ ] `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP` — **самый важный!**
-- [ ] `VITE_FIREBASE_API_KEY`
-- [ ] `VITE_FIREBASE_AUTH_DOMAIN`
-- [ ] `VITE_FIREBASE_PROJECT_ID`
-- [ ] `VITE_FIREBASE_STORAGE_BUCKET`
-- [ ] `VITE_FIREBASE_MESSAGING_SENDER_ID`
-- [ ] `VITE_FIREBASE_APP_ID`
-- [ ] `VITE_SPOTIFY_CLIENT_ID`
-- [ ] `VITE_SPOTIFY_REDIRECT_URI_PROD`
+Без этого секрета деплой **не будет работать никогда**.
+
+### Шаг 1.1 — Открой Firebase Console
+
+```
+https://console.firebase.google.com/
+```
+
+Войди в свой Google аккаунт если нужно.
 
 ---
 
-##  Дополнительно: Topics для поиска
+### Шаг 1.2 — Выбери проект
 
-Также добавь topics для лучшей индексации в поиске GitHub:
-
-1. Открой главную страницу репо
-2. Нажми  (шестерёнка) рядом с "About"
-3. В поле Topics добавь:
+Кликни на карточку проекта **notka-mvp**
 
 ```
-react, typescript, firebase, spotify, music, scrobbling, vite, gravity-ui, lastfm
+┌─────────────────────────────────────────┐
+│                                         │
+│     notka-mvp                          │   КЛИКНИ СЮДА
+│    Firebase project                     │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-##  Вопросы?
+### Шаг 1.3 — Открой настройки проекта
 
-Если что-то не понятно — спроси Крейга, он объяснит!
+В левом верхнем углу рядом с "Project Overview" есть **шестерёнка**
+
+```
+┌──────────────────────────────┐
+│    КЛИКНИ ШЕСТЕРЁНКУ        │
+│ Project Overview             │
+└──────────────────────────────┘
+         │
+         ▼
+    ┌─────────────────┐
+    │ Project settings │   Выбери это
+    └─────────────────┘
+```
 
 ---
 
-**Создано:** 24 января 2026
+### Шаг 1.4 — Перейди в Service accounts
+
+В открывшихся настройках найди вкладки вверху:
+
+```
+┌─────────┬─────────┬──────────────────┬─────────┐
+│ General │ Cloud   │ Service accounts │ ...     │
+│         │ Messaging│       ↑          │         │
+└─────────┴─────────┴────────│─────────┴─────────┘
+                             │
+                     КЛИКНИ СЮДА
+```
+
+---
+
+### Шаг 1.5 — Сгенерируй новый ключ
+
+На странице Service accounts найди кнопку:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  Firebase Admin SDK                                         │
+│                                                             │
+│  ┌──────────────────────────────┐                          │
+│  │  Generate new private key    │   КЛИКНИ ЭТУ КНОПКУ     │
+│  └──────────────────────────────┘                          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Появится предупреждение — нажми **"Generate key"**
+
+---
+
+### Шаг 1.6 — Скачай и открой JSON файл
+
+Файл скачается автоматически. Имя будет типа:
+```
+notka-mvp-firebase-adminsdk-xxxxx-xxxxxxxxxx.json
+```
+
+**Открой этот файл в любом текстовом редакторе** (Блокнот, VS Code, и т.д.)
+
+Внутри будет что-то типа:
+```json
+{
+  "type": "service_account",
+  "project_id": "notka-mvp",
+  "private_key_id": "abc123...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...",
+  "client_email": "firebase-adminsdk-xxxxx@notka-mvp.iam.gserviceaccount.com",
+  ...
+}
+```
+
+**ВАЖНО:** Выдели и скопируй **ВЕСЬ** контент файла, от первой `{` до последней `}`
+
+---
+
+### Шаг 1.7 — Добавь секрет в GitHub
+
+Открой эту ссылку:
+
+```
+https://github.com/Nikitasilin27/notka-web/settings/secrets/actions
+```
+
+Нажми зелёную кнопку **"New repository secret"**
+
+```
+┌───────────────────────────────────────────────────────────┐
+│  Actions secrets and variables                            │
+│                                                           │
+│  ┌───────────────────────────┐                           │
+│  │  New repository secret    │   КЛИКНИ                  │
+│  └───────────────────────────┘                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Шаг 1.8 — Заполни форму
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                                                           │
+│  Name *                                                   │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │ FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP                  │ │   Скопируй ТОЧНО так
+│  └─────────────────────────────────────────────────────┘ │
+│                                                           │
+│  Secret *                                                 │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │ {                                                   │ │
+│  │   "type": "service_account",                        │ │   Вставь ВЕСЬ JSON
+│  │   "project_id": "notka-mvp",                        │ │
+│  │   ...                                               │ │
+│  │ }                                                   │ │
+│  └─────────────────────────────────────────────────────┘ │
+│                                                           │
+│  ┌──────────────┐                                        │
+│  │  Add secret  │   КЛИКНИ                               │
+│  └──────────────┘                                        │
+└───────────────────────────────────────────────────────────┘
+```
+
+**ВАЖНО:** 
+- Имя секрета: `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP` (без пробелов, точно так!)
+- Значение: весь JSON файл целиком
+
+---
+
+##  ЧАСТЬ 2: Остальные секреты
+
+Эти секреты нужны для сборки приложения. Без них Vite не сможет подставить API ключи.
+
+### Где взять значения?
+
+Открой файл `.env` в папке проекта на своём компьютере. Там все значения.
+
+### Добавь каждый секрет по очереди:
+
+| # | Название секрета (скопируй точно!) | Значение |
+|---|-----------------------------------|----------|
+| 1 | `VITE_FIREBASE_API_KEY` | Из `.env` (начинается с `AIzaSy...`) |
+| 2 | `VITE_FIREBASE_AUTH_DOMAIN` | `notka-mvp.firebaseapp.com` |
+| 3 | `VITE_FIREBASE_PROJECT_ID` | `notka-mvp` |
+| 4 | `VITE_FIREBASE_STORAGE_BUCKET` | `notka-mvp.firebasestorage.app` |
+| 5 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Из `.env` (числа) |
+| 6 | `VITE_FIREBASE_APP_ID` | Из `.env` (начинается с `1:...`) |
+| 7 | `VITE_SPOTIFY_CLIENT_ID` | Из `.env` (32 символа) |
+| 8 | `VITE_SPOTIFY_REDIRECT_URI_PROD` | `https://notka-mvp.web.app/callback` |
+
+**Повтори для каждого:** New repository secret  вставь имя  вставь значение  Add secret
+
+---
+
+##  ЧАСТЬ 3: Перезапусти деплой
+
+### Вариант А: Через GitHub Actions
+
+1. Перейди: https://github.com/Nikitasilin27/notka-web/actions
+2. Найди последний упавший workflow (красный крестик)
+3. Кликни на него
+4. Нажми кнопку **"Re-run all jobs"** справа вверху
+
+### Вариант Б: Новый коммит
+
+Просто сделай любое изменение и запуш — workflow запустится автоматически.
+
+---
+
+##  Чеклист (поставь галочки)
+
+```
+[ ] FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP   БЕЗ ЭТОГО НИЧЕГО НЕ РАБОТАЕТ!
+[ ] VITE_FIREBASE_API_KEY
+[ ] VITE_FIREBASE_AUTH_DOMAIN
+[ ] VITE_FIREBASE_PROJECT_ID
+[ ] VITE_FIREBASE_STORAGE_BUCKET
+[ ] VITE_FIREBASE_MESSAGING_SENDER_ID
+[ ] VITE_FIREBASE_APP_ID
+[ ] VITE_SPOTIFY_CLIENT_ID
+[ ] VITE_SPOTIFY_REDIRECT_URI_PROD
+```
+
+---
+
+##  Частые ошибки
+
+| Проблема | Решение |
+|----------|---------|
+| `firebaseServiceAccount` not supplied | Добавь `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP` |
+| Опечатка в имени секрета | Скопируй имя из этого документа |
+| Скопировал не весь JSON | Открой файл заново, выдели всё (Ctrl+A), скопируй |
+| Секреты не применились | Перезапусти workflow в GitHub Actions |
+
+---
+
+##  Как проверить что всё работает?
+
+После добавления всех секретов и перезапуска workflow:
+
+1. Перейди в **Actions**: https://github.com/Nikitasilin27/notka-web/actions
+2. Последний workflow должен быть зелёный (галочка)
+3. Сайт обновится на https://notka-mvp.web.app/
+
+---
+
+##  Нужна помощь?
+
+Напиши Крейгу — он поможет разобраться!
+
+---
+
+**Документ создан:** 24 января 2026  
 **Автор:** Craig (cd4u2b0z)
