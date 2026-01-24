@@ -2,9 +2,11 @@
 
 ##  Проблема
 
-CI/CD пайплайн падает потому что **GitHub Actions не имеет доступа к переменным окружения** (API ключи Firebase, Spotify). 
+CI/CD пайплайн падает потому что **GitHub Actions не имеет доступа к переменным окружения** (API ключи Firebase, Spotify) и **Firebase Service Account** для деплоя.
 
-Когда код пушится на GitHub, сервер GitHub пытается собрать проект, но у него нет твоего `.env` файла — он не коммитится в репозиторий (и правильно, это секреты!).
+Когда код пушится на GitHub, сервер GitHub пытает собрать и задеплоить проект, но у него нет:
+1. Твоего `.env` файла — он не коммитится (и правильно, это секреты!)
+2. Firebase Service Account ключа для авторизации деплоя
 
 ---
 
@@ -19,9 +21,28 @@ CI/CD пайплайн падает потому что **GitHub Actions не и
 
 ---
 
-### Шаг 2: Добавь секреты
+### Шаг 2: Добавь Firebase Service Account (ОБЯЗАТЕЛЬНО!)
 
-Нажми **"New repository secret"** и добавь каждый из этих секретов:
+Это **самый важный** секрет — без него деплой не работает!
+
+**Название секрета:** `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP`
+
+**Как получить значение:**
+
+1. Открой [Firebase Console](https://console.firebase.google.com/)
+2. Выбери проект **notka-mvp**
+3. Перейди: Project Settings (шестерёнка)  Service accounts
+4. Нажми **"Generate new private key"**
+5. Скачается JSON файл — **скопируй ВЕСЬ его контент**
+6. Вставь в поле Value секрета на GitHub
+
+> Важно: Вставь весь JSON как есть, включая фигурные скобки `{ ... }`
+
+---
+
+### Шаг 3: Добавь остальные секреты
+
+Нажми **"New repository secret"** и добавь каждый:
 
 | Название секрета | Откуда взять значение |
 |------------------|----------------------|
@@ -36,7 +57,7 @@ CI/CD пайплайн падает потому что **GitHub Actions не и
 
 ---
 
-### Шаг 3: Перезапусти workflow
+### Шаг 4: Перезапусти workflow
 
 После добавления секретов:
 1. Перейди в **Actions**  выбери упавший workflow
@@ -49,18 +70,33 @@ CI/CD пайплайн падает потому что **GitHub Actions не и
 ##  Почему это нужно
 
 ```
-Твой компьютер (.env файл)     GitHub Actions (нет .env!)
+Твой компьютер                  GitHub Actions
 ┌─────────────────────────┐    ┌─────────────────────────┐
-│ VITE_FIREBASE_API_KEY=  │    │ VITE_FIREBASE_API_KEY=  │
-│ AIzaSy...               │    │ ???                     │
+│  .env файл с секретами │    │  GitHub Secrets        │
+│  Firebase CLI авториз. │    │  Service Account JSON  │
 │                         │    │                         │
-│ npm run build           │    │ npm run build           │
+│ npm run build + deploy  │    │ npm run build + deploy  │
 └─────────────────────────┘    └─────────────────────────┘
 ```
 
-Vite во время сборки заменяет `import.meta.env.VITE_*` на реальные значения. Если значений нет — сборка падает или приложение не работает.
+- **VITE_*** секреты — нужны для **сборки** (Vite заменяет `import.meta.env.*` на реальные значения)
+- **FIREBASE_SERVICE_ACCOUNT_*** — нужен для **деплоя** (авторизация в Firebase Hosting)
 
 GitHub Secrets — это безопасный способ передать секреты в CI/CD без коммита в код.
+
+---
+
+##  Чеклист
+
+- [ ] `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP` — **самый важный!**
+- [ ] `VITE_FIREBASE_API_KEY`
+- [ ] `VITE_FIREBASE_AUTH_DOMAIN`
+- [ ] `VITE_FIREBASE_PROJECT_ID`
+- [ ] `VITE_FIREBASE_STORAGE_BUCKET`
+- [ ] `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- [ ] `VITE_FIREBASE_APP_ID`
+- [ ] `VITE_SPOTIFY_CLIENT_ID`
+- [ ] `VITE_SPOTIFY_REDIRECT_URI_PROD`
 
 ---
 
