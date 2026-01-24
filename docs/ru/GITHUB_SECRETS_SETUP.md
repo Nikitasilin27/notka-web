@@ -153,7 +153,7 @@ https://github.com/Nikitasilin27/notka-web/settings/secrets/actions
 │                                                           │
 │  Name *                                                   │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │ FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP                  │ │   Скопируй ТОЧНО так
+│  │ FIREBASE_SERVICE_ACCOUNT                  │ │   Скопируй ТОЧНО так
 │  └─────────────────────────────────────────────────────┘ │
 │                                                           │
 │  Secret *                                                 │
@@ -172,7 +172,7 @@ https://github.com/Nikitasilin27/notka-web/settings/secrets/actions
 ```
 
 **ВАЖНО:** 
-- Имя секрета: `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP` (без пробелов, точно так!)
+- Имя секрета: `FIREBASE_SERVICE_ACCOUNT` (без пробелов, точно так!)
 - Значение: весь JSON файл целиком
 
 ---
@@ -220,7 +220,7 @@ https://github.com/Nikitasilin27/notka-web/settings/secrets/actions
 ##  Чеклист (поставь галочки)
 
 ```
-[ ] FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP   БЕЗ ЭТОГО НИЧЕГО НЕ РАБОТАЕТ!
+[ ] FIREBASE_SERVICE_ACCOUNT   БЕЗ ЭТОГО НИЧЕГО НЕ РАБОТАЕТ!
 [ ] VITE_FIREBASE_API_KEY
 [ ] VITE_FIREBASE_AUTH_DOMAIN
 [ ] VITE_FIREBASE_PROJECT_ID
@@ -237,7 +237,7 @@ https://github.com/Nikitasilin27/notka-web/settings/secrets/actions
 
 | Проблема | Решение |
 |----------|---------|
-| `firebaseServiceAccount` not supplied | Добавь `FIREBASE_SERVICE_ACCOUNT_NOTKA_MVP` |
+| `firebaseServiceAccount` not supplied | Добавь `FIREBASE_SERVICE_ACCOUNT` |
 | Опечатка в имени секрета | Скопируй имя из этого документа |
 | Скопировал не весь JSON | Открой файл заново, выдели всё (Ctrl+A), скопируй |
 | Секреты не применились | Перезапусти workflow в GitHub Actions |
