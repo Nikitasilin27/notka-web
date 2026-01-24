@@ -1,4 +1,4 @@
-# 🎵 Notka Web - План Улучшений MVP → Minimal Lovable Product
+#  Notka Web - План Улучшений MVP → Minimal Lovable Product
 
 **Дата анализа:** 31 декабря 2025
 **Текущая версия:** 0.1.0 (MVP)
@@ -6,7 +6,7 @@
 
 ---
 
-## 📊 Текущее Состояние Проекта
+##  Текущее Состояние Проекта
 
 ### Технологический Стек
 - **Frontend:** React 18.3.1 + TypeScript + Vite
@@ -16,27 +16,27 @@
 - **Размер кода:** 22 исходных файла TypeScript/TSX
 
 ### Реализованные Фичи (MVP)
-✅ OAuth авторизация через Spotify (PKCE)
-✅ Автоматический скробблинг треков (Last.fm rules)
-✅ Лента активности (все/подписки/мои треки)
-✅ Социальные функции (follow/unfollow, likes)
-✅ Уведомления (real-time с Firestore)
-✅ Статистика профиля (топ артисты/альбомы)
-✅ Music Match - анализ совместимости вкусов
-✅ Адаптивный дизайн (мобильная + десктоп версии)
-✅ Интернационализация (RU/EN)
-✅ Темная/светлая тема
-✅ Синхронизация лайков Spotify ↔ Notka
+ OAuth авторизация через Spotify (PKCE)
+ Автоматический скробблинг треков (Last.fm rules)
+ Лента активности (все/подписки/мои треки)
+ Социальные функции (follow/unfollow, likes)
+ Уведомления (real-time с Firestore)
+ Статистика профиля (топ артисты/альбомы)
+ Music Match - анализ совместимости вкусов
+ Адаптивный дизайн (мобильная + десктоп версии)
+ Интернационализация (RU/EN)
+ Темная/светлая тема
+ Синхронизация лайков Spotify ↔ Notka
 
 ---
 
-## 🚨 Критические Проблемы (Приоритет 1)
+##  Критические Проблемы (Приоритет 1)
 
-### 1. БЕЗОПАСНОСТЬ - Firestore Rules ⚠️ КРИТИЧНО
+### 1. БЕЗОПАСНОСТЬ - Firestore Rules  КРИТИЧНО
 **Проблема:** Все данные открыты для чтения и записи
 ```javascript
 // firestore.rules - ТЕКУЩЕЕ СОСТОЯНИЕ
-allow read, write: if true; // ❌ Любой может читать/изменять ВСЁ
+allow read, write: if true; //  Любой может читать/изменять ВСЁ
 ```
 
 **Риски:**
@@ -87,7 +87,7 @@ allow read, write: if true; // ❌ Любой может читать/измен
 
 ---
 
-## 🎯 Области для Улучшения (Приоритет 2)
+##  Области для Улучшения (Приоритет 2)
 
 ### 5. ПРОИЗВОДИТЕЛЬНОСТЬ
 
@@ -106,13 +106,13 @@ allow read, write: if true; // ❌ Любой может читать/измен
 ### 6. UX/UI УЛУЧШЕНИЯ
 
 **Отсутствует:**
-- ❌ Loading states (скелетоны)
-- ❌ Оптимистичные UI обновления
-- ❌ Toast уведомления об успехе/ошибке
-- ❌ Пустые состояния с CTA
-- ❌ Onboarding для новых пользователей
-- ❌ Search/Filter в профиле (частично есть)
-- ❌ Infinite scroll в ленте
+-  Loading states (скелетоны)
+-  Оптимистичные UI обновления
+-  Toast уведомления об успехе/ошибке
+-  Пустые состояния с CTA
+-  Onboarding для новых пользователей
+-  Search/Filter в профиле (частично есть)
+-  Infinite scroll в ленте
 
 **Текущие UX проблемы:**
 - При лайке нет визуальной обратной связи до загрузки
@@ -161,7 +161,7 @@ allow read, write: if true; // ❌ Любой может читать/измен
 
 ---
 
-## 📋 План Работ: MVP → Minimal Lovable Product
+##  План Работ: MVP → Minimal Lovable Product
 
 ### Фаза 1: Критические Исправления (2-3 дня разработки)
 
@@ -316,7 +316,7 @@ allow read, write: if true; // ❌ Любой может читать/измен
 
 ---
 
-## 📦 Рекомендуемые Библиотеки
+##  Рекомендуемые Библиотеки
 
 ### Обязательные
 - `vitest` + `@testing-library/react` - тестирование
@@ -342,7 +342,7 @@ allow read, write: if true; // ❌ Любой может читать/измен
 
 ---
 
-## 🎨 UI/UX Приоритеты для "Lovable"
+##  UI/UX Приоритеты для "Lovable"
 
 ### Эмоциональное Вовлечение
 1. **Микроанимации** - плавные переходы, жесты
@@ -364,54 +364,54 @@ allow read, write: if true; // ❌ Любой может читать/измен
 
 ---
 
-## 📈 Метрики Успеха
+##  Метрики Успеха
 
 ### Технические (MVP → MLP)
-- ✅ Firestore Rules: 0% → 100% защищено
-- ✅ Test Coverage: 0% → 60%+
-- ✅ Bundle Size: ?kb → <500kb
-- ✅ Lighthouse Score: ? → 90+
-- ✅ First Contentful Paint: ?ms → <1.5s
+-  Firestore Rules: 0% → 100% защищено
+-  Test Coverage: 0% → 60%+
+-  Bundle Size: ?kb → <500kb
+-  Lighthouse Score: ? → 90+
+-  First Contentful Paint: ?ms → <1.5s
 
 ### Продуктовые
-- ✅ Time to First Scrobble: <2 минуты
-- ✅ DAU/MAU Ratio: >20% (engagement)
-- ✅ Churn Rate: <30% (first week)
-- ✅ NPS Score: >40
+-  Time to First Scrobble: <2 минуты
+-  DAU/MAU Ratio: >20% (engagement)
+-  Churn Rate: <30% (first week)
+-  NPS Score: >40
 
 ---
 
-## 🚀 Приоритизация (MoSCoW)
+##  Приоритизация (MoSCoW)
 
 ### Must Have (Фаза 1-2)
-- ✅ Firestore Security Rules
-- ✅ Environment config
-- ✅ Error handling
-- ✅ Basic tests
+-  Firestore Security Rules
+-  Environment config
+-  Error handling
+-  Basic tests
 
 ### Should Have (Фаза 3-4)
-- ✅ Loading states
-- ✅ Toast notifications
-- ✅ Performance optimization
-- ✅ Code quality tools
+-  Loading states
+-  Toast notifications
+-  Performance optimization
+-  Code quality tools
 
 ### Could Have (Фаза 5)
-- ✅ Advanced stats
-- ✅ Gamification
-- ✅ Social features
+-  Advanced stats
+-  Gamification
+-  Social features
 
 ### Won't Have (для v2.0)
-- ❌ Mobile app (пока PWA)
-- ❌ Audio playback integration
-- ❌ Paid subscriptions
-- ❌ AI-powered recommendations
+-  Mobile app (пока PWA)
+-  Audio playback integration
+-  Paid subscriptions
+-  AI-powered recommendations
 
 ---
 
-## 📝 Следующие Шаги
+##  Следующие Шаги
 
 ### Немедленно (сегодня)
-1. ✅ Создать ветку для разработки
+1.  Создать ветку для разработки
 2. ⬜ Настроить Firestore Security Rules
 3. ⬜ Добавить .env конфигурацию
 
@@ -427,7 +427,7 @@ allow read, write: if true; // ❌ Любой может читать/измен
 
 ---
 
-## 💡 Идеи для Дифференциации
+##  Идеи для Дифференциации
 
 ### Уникальные Фичи
 1. **Music DNA** - визуальный "отпечаток" музыкального вкуса
@@ -438,7 +438,7 @@ allow read, write: if true; // ❌ Любой может читать/измен
 
 ---
 
-## ⚙️ Техническая Архитектура (будущее)
+##  Техническая Архитектура (будущее)
 
 ### Микросервисы
 - Scrobbling Service (Cloud Function)

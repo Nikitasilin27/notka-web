@@ -1,33 +1,81 @@
 {
   "name": "notka-web",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
+  "description": "🎵 Social music scrobbling — discover and share what you're listening to | Социальный скробблинг музыки — делись тем, что слушаешь",
+  "author": "Notka Team",
+  "license": "MIT",
+  "keywords": [
+    "music",
+    "scrobbling",
+    "spotify",
+    "social",
+    "lastfm",
+    "react",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts,.tsx --report-unused-disable-directives --max-warnings 20",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,scss}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,scss}\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky",
+    "ci": "npm run typecheck && npm run lint && npm run test:run && npm run build"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,scss}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@gravity-ui/icons": "^2.16.0",
     "@gravity-ui/navigation": "^4.0.3",
     "@gravity-ui/uikit": "^7.0.0",
+    "@sentry/react": "^10.36.0",
     "firebase": "^11.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.0.0"
+    "react-router-dom": "^7.0.0",
+    "web-vitals": "^5.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.1.0",
+    "husky": "^9.1.7",
+    "jsdom": "^27.4.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
     "sass": "^1.80.0",
     "typescript": "~5.6.0",
-    "vite": "^6.0.0"
-  },
-  "description": "",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+    "vite": "^6.0.0",
+    "vitest": "^4.0.18"
+  }
 }

@@ -10,33 +10,20 @@
   --notka-bg: var(--g-color-base-background);
   --notka-max-width: 900px;
 
-  // Gravity UI Spacing System
-  --space-nano: 2px;
-  --space-micro: 4px;
-  --space-s: 8px;
-  --space-m: 12px;
-  --space-l: 16px;
-  --space-xl: 20px;
-  --space-2xl: 24px;
-  --space-3xl: 28px;
-  --space-4xl: 32px;
-  --space-5xl: 36px;
-  --space-6xl: 40px;
-
-  // Legacy spacing tokens (mapped to new system for backwards compatibility)
-  --spacing-1: var(--space-micro);
-  --spacing-2: var(--space-s);
-  --spacing-3: var(--space-m);
-  --spacing-4: var(--space-l);
-  --spacing-5: var(--space-xl);
-  --spacing-6: var(--space-2xl);
-  --spacing-7: var(--space-3xl);
-  --spacing-8: var(--space-4xl);
-  --spacing-10: var(--space-6xl);
+  // Spacing tokens
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
   --spacing-12: 48px;
 
   // Grid gap (Gravity UI standard)
-  --grid-gap: var(--space-xl);
+  --grid-gap: 20px;
 }
 
 // Wider layout for large screens
@@ -52,7 +39,9 @@
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -170,7 +159,7 @@ body {
   justify-content: space-between;
   padding: var(--spacing-4);
   border-bottom: 1px solid var(--g-color-line-generic);
-  
+
   h3 {
     margin: 0;
     font-size: 16px;
@@ -189,7 +178,7 @@ body {
   color: white;
   font-size: 11px;
   font-weight: 600;
-  padding: var(--space-nano) 6px;
+  padding: 2px 6px;
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
@@ -294,7 +283,7 @@ body {
   color: var(--notka-brand);
   font-size: 12px;
   cursor: pointer;
-  
+
   &:hover {
     text-decoration: underline;
   }
@@ -318,14 +307,14 @@ body {
   padding: var(--spacing-3) var(--spacing-4);
   cursor: pointer;
   transition: background 0.15s ease;
-  
+
   &:hover {
     background: var(--g-color-base-simple-hover);
   }
-  
+
   &.unread {
     background: var(--g-color-base-info-light);
-    
+
     &:hover {
       background: var(--g-color-base-info-light-hover);
     }
@@ -359,7 +348,7 @@ body {
   font-size: 13px;
   line-height: 1.4;
   color: var(--g-color-text-primary);
-  
+
   // Truncate long text
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -370,7 +359,7 @@ body {
 .notification-time {
   font-size: 11px;
   color: var(--g-color-text-secondary);
-  margin-top: var(--space-nano);
+  margin-top: 2px;
 }
 
 .notification-actions {
@@ -378,7 +367,7 @@ body {
   gap: var(--spacing-1);
   opacity: 0;
   transition: opacity 0.15s ease;
-  
+
   .notification-item:hover & {
     opacity: 1;
   }
@@ -395,12 +384,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     background: var(--g-color-base-simple-hover);
     color: var(--g-color-text-primary);
   }
-  
+
   &.notification-delete:hover {
     background: var(--g-color-base-danger-light);
     color: var(--g-color-text-danger);
@@ -417,7 +406,7 @@ body {
   color: var(--notka-brand);
   font-size: 13px;
   cursor: pointer;
-  
+
   &:hover {
     background: var(--g-color-base-simple-hover);
   }
@@ -427,7 +416,7 @@ body {
   max-height: 400px;
   overflow-y: auto;
   margin: calc(-1 * var(--spacing-4));
-  
+
   .notification-item {
     padding: var(--spacing-3) var(--spacing-4);
   }
@@ -467,11 +456,11 @@ body {
   color: var(--g-color-text-secondary);
   cursor: pointer;
   transition: color 0.2s;
-  
+
   &.active {
     color: var(--notka-brand);
   }
-  
+
   &:active {
     opacity: 0.7;
   }
@@ -480,7 +469,7 @@ body {
 .tab-bar-icon {
   width: 24px;
   height: 24px;
-  
+
   svg {
     width: 100%;
     height: 100%;
@@ -527,13 +516,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   img {
     width: 100%;
     height: 100%;
     object-fit: contain;
   }
-  
+
   svg {
     width: 100%;
     height: 100%;
@@ -594,9 +583,9 @@ body {
   font-size: 10px;
   background: var(--g-color-base-warning-light);
   color: var(--g-color-text-warning);
-  padding: var(--space-nano) 6px;
+  padding: 2px 6px;
   border-radius: var(--g-border-radius-xs);
-  margin-left: var(--space-s);
+  margin-left: 8px;
 }
 
 .login-hint {
@@ -610,7 +599,7 @@ body {
   color: white !important;
   padding: var(--spacing-3) var(--spacing-8) !important; // 12px 32px
   font-size: 16px !important;
-  
+
   &:hover {
     background-color: var(--notka-brand-hover) !important;
   }
@@ -634,11 +623,11 @@ body {
   flex: 1;
   overflow-y: auto;
   padding-right: var(--spacing-2); // 8px
-  
+
   &::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: var(--g-color-scroll-handle);
     border-radius: var(--spacing-1); // 4px
@@ -734,8 +723,15 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
 }
 
 // Now Playing Like Button
@@ -752,15 +748,15 @@ body {
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.15s ease;
-  
+
   &:hover {
     background: var(--g-color-base-simple-hover);
     color: var(--g-color-text-primary);
   }
-  
+
   &.liked {
     color: #ff4d6a;
-    
+
     &:hover {
       color: #ff1a44;
     }
@@ -782,8 +778,10 @@ body {
   background: var(--g-color-base-float);
   border-radius: var(--g-border-radius-m);
   border: 1px solid var(--g-color-line-generic);
-  transition: background 0.2s, border-color 0.2s;
-  
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+
   &:hover {
     background: var(--g-color-base-float-hover);
     border-color: var(--g-color-line-generic-hover);
@@ -824,20 +822,20 @@ body {
   transition: all 0.2s;
   border-radius: 50%;
   flex-shrink: 0;
-  
+
   &:hover:not(:disabled) {
     color: var(--g-color-text-secondary);
   }
-  
+
   &.liked {
     color: #ff4d6a;
   }
-  
+
   &.loading {
     opacity: 0.6;
     cursor: wait;
   }
-  
+
   &:disabled {
     cursor: not-allowed;
   }
@@ -877,7 +875,7 @@ body {
 // Spotify liked label styling
 .spotify-liked-label {
   flex-shrink: 0; // Never shrink the label
-  
+
   .g-label__content {
     display: flex;
     align-items: center;
@@ -887,7 +885,7 @@ body {
 .spotify-label-content {
   display: flex;
   align-items: center;
-  gap: var(--space-micro);
+  gap: 4px;
 
   svg {
     flex-shrink: 0;
@@ -922,7 +920,7 @@ body {
   color: var(--g-color-text-secondary);
   text-decoration: none;
   margin-top: var(--spacing-1); // 4px
-  
+
   &:hover {
     color: var(--g-color-text-primary);
   }
@@ -946,7 +944,7 @@ body {
 .scrobble-likes-count {
   display: flex;
   align-items: center;
-  gap: var(--space-nano);
+  gap: 2px;
   font-size: 11px;
   color: #ff4d6a;
   font-weight: 500;
@@ -985,8 +983,10 @@ body {
   color: inherit;
   background: var(--g-color-base-float);
   border: 1px solid var(--g-color-line-generic);
-  transition: transform 0.2s, box-shadow 0.2s;
-  
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px var(--g-color-sfx-shadow);
@@ -1172,14 +1172,21 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #1DB954;
+  background: #1db954;
   animation: pulse 1.5s ease-in-out infinite;
   margin-right: var(--spacing-1);
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
 }
 
 .not-playing {
@@ -1196,7 +1203,7 @@ body {
 .profile-hero-time {
   color: var(--g-color-text-hint);
   font-size: 13px;
-  
+
   &::before {
     content: '•';
     margin: 0 var(--spacing-2);
@@ -1226,17 +1233,14 @@ body {
 }
 
 .profile-hero-stat-value {
-  // Subheader 3 (Gravity UI)
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 24px;
+  font-size: 28px;
+  font-weight: 700;
   color: var(--notka-brand);
 }
 
 @media (max-width: 768px) {
   .profile-hero-stat-value {
-    font-size: 18px;
-    line-height: 22px;
+    font-size: 24px;
   }
 }
 
@@ -1245,7 +1249,6 @@ body {
   color: var(--g-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-top: var(--space-nano); // Микромодуль дизайн-системы
 }
 
 // Profile content - Two column layout like Last.fm
@@ -1265,7 +1268,7 @@ body {
   .profile-content {
     grid-template-columns: 1fr;
   }
-  
+
   .profile-sidebar {
     order: -1; // Show top artists first on mobile
   }
@@ -1330,12 +1333,12 @@ body {
   border-radius: var(--g-border-radius-m);
   overflow: hidden;
   cursor: pointer;
-  
+
   &:hover {
     .top-artist-tile-image {
       transform: scale(1.05);
     }
-    
+
     .top-artist-tile-overlay {
       background: linear-gradient(transparent 30%, rgba(0, 0, 0, 0.9) 100%);
     }
@@ -1419,7 +1422,7 @@ body {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .track-search-input {
     width: 100%;
   }
@@ -1438,7 +1441,7 @@ body {
 .settings-page {
   max-width: 600px;
   margin: 0 auto;
-  
+
   h1 {
     margin-bottom: var(--spacing-6); // 24px
   }
@@ -1478,7 +1481,7 @@ body {
   color: var(--notka-brand);
   text-decoration: none;
   font-weight: 500;
-  
+
   &:hover {
     text-decoration: underline;
   }
@@ -1733,7 +1736,7 @@ body {
   cursor: pointer;
   color: var(--g-color-text-primary);
   transition: background 0.2s;
-  
+
   &:hover {
     background: var(--g-color-base-simple-hover);
   }
@@ -1747,7 +1750,7 @@ body {
 .language-option {
   display: flex;
   flex-direction: column;
-  gap: var(--space-nano);
+  gap: 2px;
 }
 
 .language-name {
@@ -1764,7 +1767,7 @@ body {
 .settings-item-text {
   display: flex;
   flex-direction: column;
-  gap: var(--space-nano);
+  gap: 2px;
 }
 
 .settings-item-description {
@@ -1790,7 +1793,7 @@ body {
 .cross-like-option {
   display: flex;
   flex-direction: column;
-  gap: var(--space-nano);
+  gap: 2px;
 }
 
 .cross-like-label {
@@ -1837,38 +1840,12 @@ body {
   }
 
   .artist-dialog .g-dialog__content,
-  .match-dialog .g-dialog__content,
-  .album-dialog .g-dialog__content {
+  .match-dialog .g-dialog__content {
     width: calc(100% - 32px) !important;
   }
 
   .match-dialog-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-  }
-
-  // Album dialog mobile layout
-  .album-dialog .g-dialog__body > div {
-    flex-direction: column !important;
-    gap: var(--spacing-4) !important;
-
-    // Album cover on mobile
-    > div:first-child {
-      width: 100% !important;
-
-      img {
-        width: 100% !important;
-        height: auto !important;
-        max-width: 280px !important;
-        margin: 0 auto !important;
-        display: block !important;
-      }
-    }
-  }
-
-  // Followers/Following dialogs
-  .g-dialog[class*="followers"] .g-dialog__content,
-  .g-dialog[class*="following"] .g-dialog__content {
-    width: calc(100% - 32px) !important;
   }
 }
 
@@ -1896,12 +1873,310 @@ body {
 .now-playing-skeleton-line {
   height: 16px;
   border-radius: var(--g-border-radius-s);
-  
+
   &:first-child {
     width: 70%;
   }
-  
+
   &:last-child {
     width: 50%;
+  }
+}
+
+// ============================================
+// POLISH AND ENHANCEMENTS
+// ============================================
+
+// Scrobble card animations
+.scrobble-card {
+  &.card-enter {
+    animation: slideInUp 300ms cubic-bezier(0, 0, 0.2, 1) both;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &:active {
+    transform: translateY(0);
+    transition-duration: 100ms;
+  }
+}
+
+// Like button animations
+.scrobble-like-btn {
+  &.animate {
+    animation: heartbeat 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  &:hover:not(:disabled) {
+    transform: scale(1.1);
+    background: rgba(255, 77, 106, 0.1);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--g-color-line-brand);
+    outline-offset: 2px;
+  }
+}
+
+// Now playing like button
+.now-playing-like-btn {
+  &.animate {
+    animation: heartbeat 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--g-color-line-brand);
+    outline-offset: 2px;
+  }
+}
+
+// Skeleton placeholder for like button
+.scrobble-like-btn-skeleton {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Skeleton list container
+.scrobble-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3, 12px);
+}
+
+// Now playing indicator animation
+.now-playing-indicator {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+
+  .bar {
+    width: 3px;
+    background: var(--g-color-base-brand);
+    border-radius: 1px;
+    animation: waveformAnim 0.8s ease-in-out infinite;
+  }
+
+  .bar:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .bar:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .bar:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  .bar:nth-child(4) {
+    animation-delay: 0.45s;
+  }
+}
+
+@keyframes waveformAnim {
+  0%,
+  100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.3);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.3);
+  }
+  70% {
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Now playing status text
+.now-playing-status-text {
+  font-size: 12px;
+  color: var(--g-color-text-brand);
+  font-weight: 500;
+}
+
+// Now playing empty state
+.now-playing.now-playing-empty {
+  opacity: 0.7;
+}
+
+.now-playing-art-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--g-color-base-generic);
+  color: var(--g-color-text-hint);
+}
+
+// Focus states for accessibility
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--g-color-line-brand);
+  outline-offset: 2px;
+}
+
+// Skip to main content link
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--g-color-base-brand);
+  color: white;
+  padding: 8px 16px;
+  z-index: 1000;
+  transition: top 0.3s;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+
+  &:focus {
+    top: 0;
+  }
+}
+
+// Empty states enhancement
+.empty-state {
+  animation: fadeIn 0.4s ease-out;
+}
+
+// Dialog/Modal animations
+.g-dialog__content {
+  animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+.g-dialog__veil {
+  animation: fadeIn 0.2s ease-out both;
+}
+
+// Toast animations
+.g-toaster__item {
+  animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+// Notification animations
+.notification-item {
+  animation: slideInLeft 0.3s cubic-bezier(0, 0, 0.2, 1) both;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: var(--g-color-base-float-hover);
+  }
+
+  &.unread {
+    background: var(--g-color-base-info-light);
+
+    &:hover {
+      background: var(--g-color-base-info-light-hover);
+    }
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .scrobble-card,
+  .scrobble-like-btn,
+  .now-playing-like-btn,
+  .now-playing-indicator .bar,
+  .notification-item,
+  .empty-state,
+  .g-dialog__content,
+  .g-dialog__veil,
+  .g-toaster__item {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  button,
+  a,
+  .scrobble-card {
+    transition-duration: 0ms !important;
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: more) {
+  .scrobble-card {
+    border-width: 2px;
+    border-color: var(--g-color-text-primary);
+  }
+
+  button:focus-visible,
+  a:focus-visible {
+    outline-width: 3px;
+    outline-offset: 3px;
   }
 }

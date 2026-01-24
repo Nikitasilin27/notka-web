@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://notka-mvp.web.app/sitemap.xml

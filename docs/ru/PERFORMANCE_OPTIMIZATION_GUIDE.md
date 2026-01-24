@@ -154,4 +154,4 @@ firebase deploy --only hosting
 3. .env файл содержит правильные ключи
 4. Нет ошибок в Browser Console
 
-Удачи! 🚀
+Удачи! 

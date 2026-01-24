@@ -1,6 +1,6 @@
-# 🔀 Инструкция: Работа с Веткой в GitHub
+#  Инструкция: Работа с Веткой в GitHub
 
-## 📍 Информация о Ветке
+##  Информация о Ветке
 
 **Название ветки:** `claude/project-review-plan-Wwhez`
 **Репозиторий:** Nikitasilin27/notka-web
@@ -10,7 +10,7 @@
 
 ---
 
-## 🚀 Быстрый Старт
+##  Быстрый Старт
 
 ### Проверка Текущей Ветки
 
@@ -34,7 +34,7 @@ git log --oneline -5
 
 ---
 
-## 📤 Отправка Изменений в GitHub
+##  Отправка Изменений в GitHub
 
 ### 1. Коммит Изменений
 
@@ -93,7 +93,7 @@ sleep 16 && git push
 
 ---
 
-## 🔄 Синхронизация с Основной Веткой
+##  Синхронизация с Основной Веткой
 
 ### Обновление от Main
 
@@ -124,7 +124,7 @@ git pull --rebase origin claude/project-review-plan-Wwhez
 
 ---
 
-## 🔀 Создание Pull Request
+##  Создание Pull Request
 
 ### Через GitHub Web Interface
 
@@ -138,24 +138,24 @@ git pull --rebase origin claude/project-review-plan-Wwhez
 
 3. **Заполните информацию о PR:**
    ```markdown
-   Заголовок: 🎯 MVP → Minimal Lovable Product: Comprehensive Improvements
+   Заголовок:  MVP → Minimal Lovable Product: Comprehensive Improvements
 
    Описание:
    ## Summary
    Комплексный план улучшений для превращения Notka из MVP в Minimal Lovable Product
 
    ## Что включено
-   - 📋 Детальный анализ текущего состояния проекта
-   - 🚨 Выявление критических проблем (безопасность, тесты)
-   - 🎯 План работ на 6 фаз разработки
-   - 📈 Метрики успеха и приоритизация
-   - 💡 Идеи для дифференциации продукта
+   -  Детальный анализ текущего состояния проекта
+   -  Выявление критических проблем (безопасность, тесты)
+   -  План работ на 6 фаз разработки
+   -  Метрики успеха и приоритизация
+   -  Идеи для дифференциации продукта
 
    ## Критические находки
-   - ⚠️ Firestore Rules полностью открыты (anyone can read/write)
-   - ⚠️ Отсутствие тестов (0% coverage)
-   - ⚠️ Нет обработки ошибок
-   - ⚠️ Hardcoded конфигурация
+   -  Firestore Rules полностью открыты (anyone can read/write)
+   -  Отсутствие тестов (0% coverage)
+   -  Нет обработки ошибок
+   -  Hardcoded конфигурация
 
    ## План действий
    Смотрите `PROJECT_IMPROVEMENT_PLAN.md` для детального плана
@@ -181,21 +181,21 @@ git pull --rebase origin claude/project-review-plan-Wwhez
 
 # Создайте PR
 gh pr create \
-  --title "🎯 MVP → Minimal Lovable Product: Comprehensive Improvements" \
+  --title " MVP → Minimal Lovable Product: Comprehensive Improvements" \
   --body "$(cat <<'EOF'
 ## Summary
 Комплексный план улучшений для превращения Notka из MVP в Minimal Lovable Product
 
 ## Что включено
-- 📋 Детальный анализ текущего состояния проекта
-- 🚨 Выявление критических проблем (безопасность, тесты)
-- 🎯 План работ на 6 фаз разработки
-- 📈 Метрики успеха и приоритизация
+-  Детальный анализ текущего состояния проекта
+-  Выявление критических проблем (безопасность, тесты)
+-  План работ на 6 фаз разработки
+-  Метрики успеха и приоритизация
 
 ## Критические находки
-- ⚠️ Firestore Rules полностью открыты
-- ⚠️ Отсутствие тестов (0% coverage)
-- ⚠️ Нет обработки ошибок
+-  Firestore Rules полностью открыты
+-  Отсутствие тестов (0% coverage)
+-  Нет обработки ошибок
 
 Смотрите PROJECT_IMPROVEMENT_PLAN.md для деталей
 EOF
@@ -205,7 +205,7 @@ EOF
 
 ---
 
-## 📝 Best Practices для Коммитов
+##  Best Practices для Коммитов
 
 ### Структура Коммита
 
@@ -248,7 +248,7 @@ git commit -m "test: setup Vitest and add tests for useAuth hook"
 
 ---
 
-## 🔍 Просмотр Изменений
+##  Просмотр Изменений
 
 ### Локальные Изменения
 
@@ -281,7 +281,7 @@ git log -p
 
 ---
 
-## ⚡ Полезные Команды
+##  Полезные Команды
 
 ### Отмена Изменений
 
@@ -295,7 +295,7 @@ git reset HEAD PROJECT_IMPROVEMENT_PLAN.md
 # Отменить последний коммит (сохранить изменения)
 git reset --soft HEAD~1
 
-# Отменить последний коммит (удалить изменения) ⚠️
+# Отменить последний коммит (удалить изменения) 
 git reset --hard HEAD~1
 ```
 
@@ -336,7 +336,7 @@ git push origin --delete feature/old-feature
 
 ---
 
-## 🛠 Решение Проблем
+##  Решение Проблем
 
 ### Конфликты при Merge
 
@@ -384,7 +384,7 @@ git cherry-pick <commit-hash>
 ### Случайный Push
 
 ```bash
-# ⚠️ ОСТОРОЖНО: используйте только если уверены
+#  ОСТОРОЖНО: используйте только если уверены
 
 # Отменить последний коммит на сервере
 git revert HEAD
@@ -397,7 +397,7 @@ git push --force origin claude/project-review-plan-Wwhez
 
 ---
 
-## 🎯 Workflow для Разработки
+##  Workflow для Разработки
 
 ### Рекомендуемый Процесс
 
@@ -438,7 +438,7 @@ git push --force origin claude/project-review-plan-Wwhez
 
 ---
 
-## 📊 GitHub Actions (CI/CD)
+##  GitHub Actions (CI/CD)
 
 ### Текущие Workflows
 
@@ -463,15 +463,15 @@ git push --force origin claude/project-review-plan-Wwhez
 
 ---
 
-## 🔐 Безопасность
+##  Безопасность
 
 ### НЕ Коммитьте:
 
-❌ `.env` файлы с секретами
-❌ `firebase-debug.log`
-❌ API ключи
-❌ Пароли/токены
-❌ Personal access tokens
+ `.env` файлы с секретами
+ `firebase-debug.log`
+ API ключи
+ Пароли/токены
+ Personal access tokens
 
 ### Проверьте .gitignore:
 
@@ -485,7 +485,7 @@ git check-ignore -v .env
 
 ---
 
-## 📚 Дополнительные Ресурсы
+##  Дополнительные Ресурсы
 
 - [Git Documentation](https://git-scm.com/doc)
 - [GitHub Docs](https://docs.github.com/)
@@ -494,7 +494,7 @@ git check-ignore -v .env
 
 ---
 
-## 💬 Вопросы?
+##  Вопросы?
 
 Если возникли вопросы или проблемы:
 

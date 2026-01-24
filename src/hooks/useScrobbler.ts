@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentlyPlaying, isTrackLiked, getTrackLikedDate } from '../services/spotify';
-import { updateCurrentTrack, addScrobble, getLastUserScrobble, getUser, likeScrobble } from '../services/firebase';
+import { getCurrentlyPlaying, isTrackLiked } from '../services/spotify';
+import { updateCurrentTrack, addScrobble, getLastUserScrobble } from '../services/firebase';
 import { SpotifyCurrentlyPlaying, Scrobble, SpotifyTrack } from '../types';
 import { useAuth } from './useAuth';
 
@@ -74,7 +74,7 @@ export function useScrobbler(): UseScrobblerReturn {
   const [lastScrobbleLoaded, setLastScrobbleLoaded] = useState(globalState.lastScrobbleLoaded);
   const [pollInterval, setPollInterval] = useState(POLL_INTERVAL_PLAYING);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFirstCheck = useRef(true);
 
   // Calculate adaptive poll interval based on playback state
@@ -109,7 +109,7 @@ export function useScrobbler(): UseScrobblerReturn {
       setLastScrobbleLoaded(true);
       return;
     }
-    
+
     const loadLastScrobble = async () => {
       try {
         const lastScrobbleData = await getLastUserScrobble(spotifyId);
@@ -125,7 +125,7 @@ export function useScrobbler(): UseScrobblerReturn {
         setLastScrobbleLoaded(true);
       }
     };
-    
+
     loadLastScrobble();
   }, [spotifyId]);
 
@@ -136,105 +136,82 @@ export function useScrobbler(): UseScrobblerReturn {
   }, []);
 
   // Check if track should be scrobbled
-  const shouldScrobble = useCallback((session: TrackSession): boolean => {
-    if (session.scrobbled) return false;
-    if (session.track.duration_ms < MIN_TRACK_DURATION) return false;
-    
-    const threshold = getScrobbleThreshold(session.track.duration_ms);
-    return session.maxProgress >= threshold;
-  }, [getScrobbleThreshold]);
+  const shouldScrobble = useCallback(
+    (session: TrackSession): boolean => {
+      if (session.scrobbled) return false;
+      if (session.track.duration_ms < MIN_TRACK_DURATION) return false;
+
+      const threshold = getScrobbleThreshold(session.track.duration_ms);
+      return session.maxProgress >= threshold;
+    },
+    [getScrobbleThreshold]
+  );
 
   // Perform scrobble
-  const doScrobble = useCallback(async (session: TrackSession): Promise<boolean> => {
-    if (!spotifyId || globalState.isScrobbling) return false;
-    
-    // Check for duplicate (same track within 3 minutes)
-    if (globalState.lastScrobbledTrackId === session.trackId) {
-      const timeSince = Date.now() - globalState.lastScrobbledTime;
-      if (timeSince < 3 * 60 * 1000) {
-        console.log(`⏭ Skip duplicate: ${session.track.name}`);
-        return false;
+  const doScrobble = useCallback(
+    async (session: TrackSession): Promise<boolean> => {
+      if (!spotifyId || globalState.isScrobbling) return false;
+
+      // Check for duplicate (same track within 3 minutes)
+      if (globalState.lastScrobbledTrackId === session.trackId) {
+        const timeSince = Date.now() - globalState.lastScrobbledTime;
+        if (timeSince < 3 * 60 * 1000) {
+          console.log(`⏭ Skip duplicate: ${session.track.name}`);
+          return false;
+        }
       }
-    }
-    
-    globalState.isScrobbling = true;
-    setIsScrobbling(true);
-    
-    try {
-      // Check if track is liked on Spotify
-      let isLikedOnSpotify = false;
+
+      globalState.isScrobbling = true;
+      setIsScrobbling(true);
+
       try {
-        isLikedOnSpotify = await isTrackLiked(session.trackId);
-      } catch (e) {
-        console.log('Could not check Spotify like status:', e);
-      }
-      
-      const scrobble: Omit<Scrobble, 'id'> = {
-        odl: spotifyId,
-        trackId: session.trackId,
-        artistId: session.track.artists[0]?.id, // Primary artist ID for accurate image
-        title: session.track.name,
-        artist: session.track.artists.map(a => a.name).join(', '),
-        album: session.track.album.name,
-        albumArtURL: session.track.album.images[0]?.url,
-        timestamp: new Date(session.startTime),
-        duration: session.track.duration_ms,
-        isLikedOnSpotify,
-        likesCount: 0,
-      };
-
-      const id = await addScrobble(scrobble);
-
-      if (id) {
-        globalState.lastScrobbledTrackId = session.trackId;
-        globalState.lastScrobbledTime = Date.now();
-        setLastScrobble({ ...scrobble, id });
-
-        // Cross-like sync: Spotify → Notka (only for new likes)
-        if (isLikedOnSpotify) {
-          try {
-            const user = await getUser(spotifyId);
-            if (user?.crossLikeEnabled &&
-                (user.crossLikeMode === 'spotify_to_notka' || user.crossLikeMode === 'both')) {
-
-              // Check when track was added to Spotify Liked Songs
-              const likedDate = await getTrackLikedDate(session.trackId);
-              const syncStartedAt = user.crossLikeSyncStartedAt;
-
-              // Only auto-like if track was added AFTER sync was enabled
-              if (likedDate && syncStartedAt && likedDate >= syncStartedAt) {
-                await likeScrobble({ ...scrobble, id }, {
-                  odl: spotifyId,
-                  name: user.name,
-                  avatar: user.avatarURL
-                });
-                console.log('🔄 Auto-liked in Notka (Spotify sync - new like)');
-              } else if (!syncStartedAt) {
-                // Backward compatibility: if no sync start date, don't sync old likes
-                console.log('⏭ Skipped old like (sync started before timestamp tracking)');
-              } else {
-                console.log('⏭ Skipped old like (added before sync was enabled)');
-              }
-            }
-          } catch (err) {
-            console.error('Cross-like sync error:', err);
-          }
+        // Check if track is liked on Spotify
+        let isLikedOnSpotify = false;
+        try {
+          isLikedOnSpotify = await isTrackLiked(session.trackId);
+        } catch (e) {
+          console.log('Could not check Spotify like status:', e);
         }
 
-        const dur = Math.round(session.track.duration_ms / 1000);
-        const likeIcon = isLikedOnSpotify ? ' 💚' : '';
-        console.log(`✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`);
-        return true;
+        const scrobble: Omit<Scrobble, 'id'> = {
+          odl: spotifyId,
+          trackId: session.trackId,
+          artistId: session.track.artists[0]?.id, // Primary artist ID for accurate image
+          title: session.track.name,
+          artist: session.track.artists.map((a) => a.name).join(', '),
+          album: session.track.album.name,
+          albumArtURL: session.track.album.images[0]?.url,
+          timestamp: new Date(session.startTime),
+          duration: session.track.duration_ms,
+          isLikedOnSpotify,
+          likesCount: 0,
+        };
+
+        const id = await addScrobble(scrobble);
+
+        if (id) {
+          globalState.lastScrobbledTrackId = session.trackId;
+          globalState.lastScrobbledTime = Date.now();
+          setLastScrobble({ ...scrobble, id });
+
+          const dur = Math.round(session.track.duration_ms / 1000);
+          const likeIcon = isLikedOnSpotify ? ' 💚' : '';
+          console.log(
+            `✓ Scrobbled: ${session.track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')})${likeIcon}`
+          );
+          return true;
+        }
+      } catch (err) {
+        console.error('Scrobble error:', err);
+        setError(err instanceof Error ? err.message : 'Scrobble failed');
+      } finally {
+        globalState.isScrobbling = false;
+        setIsScrobbling(false);
       }
-    } catch (err) {
-      console.error('Scrobble error:', err);
-      setError(err instanceof Error ? err.message : 'Scrobble failed');
-    } finally {
-      globalState.isScrobbling = false;
-      setIsScrobbling(false);
-    }
-    return false;
-  }, [spotifyId]);
+      return false;
+    },
+    [spotifyId]
+  );
 
   // Main polling function
   const checkPlayback = useCallback(async () => {
@@ -242,14 +219,14 @@ export function useScrobbler(): UseScrobblerReturn {
 
     try {
       const playing = await getCurrentlyPlaying();
-      
+
       // Mark as loaded after first check
       if (isFirstCheck.current) {
         isFirstCheck.current = false;
         setIsLoading(false);
         globalState.initialized = true;
       }
-      
+
       setCurrentlyPlaying(playing);
 
       const track = playing?.item;
@@ -263,7 +240,7 @@ export function useScrobbler(): UseScrobblerReturn {
           await doScrobble(globalState.currentSession);
           globalState.currentSession.scrobbled = true;
         }
-        
+
         // Clear current track in Firebase
         if (globalState.currentSession) {
           await updateCurrentTrack(spotifyId, null);
@@ -282,18 +259,19 @@ export function useScrobbler(): UseScrobblerReturn {
             await doScrobble(prevTrack);
           }
         }
-        
+
         // Check if this track was ALREADY scrobbled recently (prevents page reload duplicates)
         const threshold = getScrobbleThreshold(track.duration_ms);
         const alreadyPastThreshold = progressMs >= threshold * 0.9; // 90% of threshold
-        
+
         let wasAlreadyScrobbled = false;
         if (alreadyPastThreshold) {
           // This track is already past scrobble point - check if we already scrobbled it
-          wasAlreadyScrobbled = globalState.lastScrobbledTrackId === track.id &&
-            (Date.now() - globalState.lastScrobbledTime) < 10 * 60 * 1000; // 10 min
+          wasAlreadyScrobbled =
+            globalState.lastScrobbledTrackId === track.id &&
+            Date.now() - globalState.lastScrobbledTime < 10 * 60 * 1000; // 10 min
         }
-        
+
         // Start new session
         globalState.currentSession = {
           trackId: track.id,
@@ -302,18 +280,20 @@ export function useScrobbler(): UseScrobblerReturn {
           maxProgress: progressMs,
           scrobbled: wasAlreadyScrobbled, // Mark as already scrobbled if past threshold on load
         };
-        
+
         await updateCurrentTrack(spotifyId, {
           trackId: track.id,
           trackName: track.name,
-          artistName: track.artists.map(a => a.name).join(', '),
+          artistName: track.artists.map((a) => a.name).join(', '),
           albumArtURL: track.album.images[0]?.url,
         });
-        
+
         const dur = Math.round(track.duration_ms / 1000);
         const scrobAt = Math.round(threshold / 1000);
         const status = wasAlreadyScrobbled ? '(already scrobbled)' : '';
-        console.log(`▶ Now: ${track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}, scrobble@${scrobAt}s) ${status}`);
+        console.log(
+          `▶ Now: ${track.name} (${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}, scrobble@${scrobAt}s) ${status}`
+        );
         return;
       }
 
@@ -322,7 +302,7 @@ export function useScrobbler(): UseScrobblerReturn {
         if (progressMs > globalState.currentSession.maxProgress) {
           globalState.currentSession.maxProgress = progressMs;
         }
-        
+
         // Check if we should scrobble now
         if (shouldScrobble(globalState.currentSession)) {
           const scrobbled = await doScrobble(globalState.currentSession);
@@ -359,7 +339,15 @@ export function useScrobbler(): UseScrobblerReturn {
         setIsLoading(false);
       }
     }
-  }, [isAuthenticated, spotifyId, shouldScrobble, doScrobble, getScrobbleThreshold, calculatePollInterval, pollInterval]);
+  }, [
+    isAuthenticated,
+    spotifyId,
+    shouldScrobble,
+    doScrobble,
+    getScrobbleThreshold,
+    calculatePollInterval,
+    pollInterval,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) {
