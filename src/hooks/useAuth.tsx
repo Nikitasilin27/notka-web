@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { User } from '../types';
 import { getTokens, clearTokens, getCurrentUser } from '../services/spotify';
 import { getUser, createOrUpdateUser } from '../services/firebase';
+import { signInToFirebaseWithSpotify } from '../services/auth-bridge';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setSpotifyId(spotifyUser.id);
+
+      // Фаза 0: устанавливаем сессию Firebase Auth (uid == Spotify id) до I/O
+      // с Firestore. Graceful: не роняет вход, пока функция/правила не задеплоены.
+      await signInToFirebaseWithSpotify(tokens.accessToken);
 
       // Get or create user in Firebase
       let firebaseUser = await getUser(spotifyUser.id);

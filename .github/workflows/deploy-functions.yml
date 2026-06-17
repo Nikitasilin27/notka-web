@@ -1,0 +1,31 @@
+name: Deploy Cloud Functions (notka-mvp)
+
+# Запуск ВРУЧНУЮ из вкладки Actions → "Run workflow".
+# Сборка и деплой идут на Linux-раннере GitHub — локальная машина не участвует
+# (обход того, что macOS-защита убивает локальную сборку tsc).
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy_functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install & build functions
+        working-directory: functions
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy functions to notka-mvp
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions --project notka-mvp
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

@@ -1,102 +1,151 @@
 rules_version = '2';
+
+// Notka — Firestore Security Rules (Фаза 0)
+//
+// Канонический идентификатор: uid == Spotify ID (выдаётся Cloud Function
+// exchangeSpotifyToken). Поэтому request.auth.uid совпадает с полем `odl`
+// и с ключами документов users/{odl}. `userId` — легаси-поле iOS,
+// поддерживается на переходный период.
+//
+// Главное отличие от прежней версии: добавлена ПРИВЯЗКА К request.auth.uid.
+// Раньше проверки структуры были, но без аутентификации — кто угодно мог
+// писать документы с чужим odl. Соглашения по ID документов
+// (likes = {odl}_{scrobbleId}, followers = {followerId}_{followingId})
+// сохранены.
+//
+// ⚠️ Каркас — выверить на эмуляторе (firebase emulators:start) перед прод-деплоем.
+// Деплоить ТОЛЬКО после того, как веб реально логинится в Firebase Auth,
+// иначе все запросы станут unauthenticated и приложение «ослепнет».
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isAuthenticated() {
+    function signedIn() {
       return request.auth != null;
     }
-
-    function isOwner(odl) {
-      return request.auth != null && request.auth.token.email != null;
+    function uid() {
+      return request.auth.uid;
+    }
+    // владелец нового документа (по полю odl или легаси userId)
+    function ownsNew() {
+      return signedIn() && (
+        uid() == request.resource.data.odl ||
+        uid() == request.resource.data.userId
+      );
+    }
+    // владелец существующего документа
+    function ownsExisting() {
+      return signedIn() && (
+        uid() == resource.data.odl ||
+        uid() == resource.data.userId
+      );
     }
 
-    // USERS collection
+    // USERS: id документа == spotifyId == uid (для iOS — Firebase Auth UID)
     match /users/{userId} {
-      // Anyone can read user profiles
-      allow read: if true;
+      allow read: if signedIn();
+      allow create, delete: if signedIn() && uid() == userId;
+      allow update: if signedIn() && (
+        uid() == userId
+        // ⚠️ ВРЕМЕННО: при follow/unfollow клиент инкрементит счётчики на
+        // ЧУЖОМ документе. Разрешаем менять ТОЛЬКО эти поля. Правильный фикс —
+        // перенести инкременты в Cloud Functions (onFollowCreated/onFollowDeleted)
+        // и убрать клиентскую запись; тогда эту ветку удалить.
+        || request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['followersCount', 'followingCount'])
+      );
 
-      // Only the user can create/update their own profile
-      allow create: if request.resource.data.odl == userId;
-      allow update: if resource.data.odl == userId;
-
-      // Only the user can delete their profile
-      allow delete: if resource.data.odl == userId;
+      // BLOCKED_USERS (iOS): подколлекция блокировок — только владелец списка.
+      match /blocked_users/{blockedId} {
+        allow read, write: if signedIn() && uid() == userId;
+      }
     }
 
-    // SCROBBLES collection
+    // SCROBBLES: читают все авторизованные (лента/дискавери); пишет владелец.
+    // likesCount меняет ТОЛЬКО Cloud Function (admin обходит правила).
     match /scrobbles/{scrobbleId} {
-      // Anyone can read scrobbles
-      allow read: if true;
-
-      // Only authenticated users can create scrobbles
-      // Must include odl field matching a valid user
-      allow create: if request.resource.data.odl is string
+      allow read: if signedIn();
+      allow create: if ownsNew()
                     && request.resource.data.title is string
                     && request.resource.data.artist is string
                     && request.resource.data.timestamp != null;
-
-      // Only the owner can update their scrobble
-      allow update: if resource.data.odl == request.resource.data.odl;
-
-      // Only the owner can delete their scrobble
-      allow delete: if resource.data.odl != null;
+      allow update, delete: if ownsExisting();
     }
 
-    // LIKES collection
-    // Document ID format: {odl}_{scrobbleId}
+    // LIKES: id == {odl}_{scrobbleId}. Лайкающий владеет своим лайком.
     match /likes/{likeId} {
-      // Anyone can read likes
-      allow read: if true;
-
-      // User can only create a like with their own odl
-      // Document ID must match pattern: {odl}_{scrobbleId}
-      allow create: if request.resource.data.odl is string
+      allow read: if signedIn();
+      allow create: if ownsNew()
                     && request.resource.data.scrobbleId is string
-                    && request.resource.data.trackId is string
                     && likeId == request.resource.data.odl + '_' + request.resource.data.scrobbleId;
-
-      // User can only delete their own likes
-      allow delete: if likeId.matches('^' + resource.data.odl + '_.*');
+      allow delete: if ownsExisting()
+                    && likeId.matches('^' + resource.data.odl + '_.*');
     }
 
-    // FOLLOWERS collection
-    // Document ID format: {followerId}_{followingId}
+    // FOLLOWERS: id == {followerId}_{followingId}. Владеет подписчик.
     match /followers/{followId} {
-      // Anyone can read follower relationships
-      allow read: if true;
-
-      // User can only create a follow relationship where they are the follower
-      allow create: if request.resource.data.followerId is string
-                    && request.resource.data.followingId is string
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && uid() == request.resource.data.followerId
                     && followId == request.resource.data.followerId + '_' + request.resource.data.followingId;
-
-      // User can only delete a follow relationship where they are the follower
-      allow delete: if followId.matches('^' + resource.data.followerId + '_.*');
+      allow delete: if signedIn() && uid() == resource.data.followerId;
     }
 
-    // NOTIFICATIONS collection
+    // CHATS (iOS): доступ только участникам (participantIds).
+    match /chats/{chatId} {
+      allow read:   if signedIn() && uid() in resource.data.participantIds;
+      allow create: if signedIn() && uid() in request.resource.data.participantIds;
+      allow update: if signedIn() && uid() in resource.data.participantIds;
+      allow delete: if false;
+
+      // MESSAGES: писать может только отправитель и только в свой чат;
+      // читать/обновлять (isRead, likedBy) — любой участник.
+      match /messages/{messageId} {
+        function chatParticipants() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+        }
+        allow read:   if signedIn() && uid() in chatParticipants();
+        allow create: if signedIn()
+                      && uid() == request.resource.data.senderId
+                      && uid() in chatParticipants();
+        allow update: if signedIn() && uid() in chatParticipants();
+        allow delete: if false;
+      }
+    }
+
+    // NOTIFICATIONS: создаёт ТОЛЬКО Cloud Function. Получатель (odl) читает/удаляет.
     match /notifications/{notificationId} {
-      // User can only read their own notifications
-      allow read: if resource.data.odl != null;
-
-      // Only Cloud Functions can create notifications (no direct create from client)
-      allow create: if false;
-
-      // User can update (mark as read) their own notifications
-      allow update: if resource.data.odl != null
+      allow read, delete: if signedIn() && uid() == resource.data.odl;
+      allow update: if signedIn() && uid() == resource.data.odl
                     && request.resource.data.read is bool;
-
-      // User can delete their own notifications
-      allow delete: if resource.data.odl != null;
+      allow create: if false;
     }
 
-    // SUGGESTIONS collection (if exists)
+    // SUGGESTIONS: отправитель владеет рекомендацией.
+    // ⚠️ Расхождение схемы: web использует fromId/toId, iOS — fromUserId/toUserId.
+    // Терпим к обоим до унификации. (Отдельно: Cloud Function onSuggestionCreated
+    // читает fromId/toId и НЕ срабатывает на iOS-документах — починить функцию.)
     match /suggestions/{suggestionId} {
-      allow read: if true;
-      allow create: if request.resource.data.fromId is string
-                    && request.resource.data.toId is string;
-      allow delete: if resource.data.toId != null || resource.data.fromId != null;
+      allow read: if signedIn() && (
+        uid() == resource.data.fromId || uid() == resource.data.toId ||
+        uid() == resource.data.fromUserId || uid() == resource.data.toUserId
+      );
+      allow create: if signedIn() && (
+        uid() == request.resource.data.fromId ||
+        uid() == request.resource.data.fromUserId
+      );
+      // получатель помечает прочитанным
+      allow update: if signedIn() && (
+        uid() == resource.data.toId || uid() == resource.data.toUserId
+      );
+      allow delete: if signedIn() && (
+        uid() == resource.data.fromId || uid() == resource.data.fromUserId
+      );
+    }
+
+    // Default deny — всё, что не описано выше, запрещено.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
