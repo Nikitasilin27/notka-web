@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { getTokens, clearTokens, getCurrentUser } from '../services/spotify';
+import { getTokens, clearTokens, getCurrentUser, getValidAccessToken } from '../services/spotify';
 import { getUser, createOrUpdateUser } from '../services/firebase';
 import { signInToFirebaseWithSpotify } from '../services/auth-bridge';
 
@@ -40,12 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSpotifyId(spotifyUser.id);
 
       // Фаза 0: устанавливаем сессию Firebase Auth (uid == Spotify id) до I/O
-      // с Firestore. Graceful: не роняет вход, пока функция/правила не задеплоены.
-      await signInToFirebaseWithSpotify(tokens.accessToken);
+      // с Firestore. Берём СВЕЖИЙ токен: getCurrentUser выше мог обновить его, и
+      // tokens.accessToken (прочитан в начале) к этому моменту может быть протухшим
+      // — тогда exchangeSpotifyToken получил бы 401 и Firebase-сессия не встала бы.
+      // Graceful: не роняет вход, пока функция/правила не задеплоены.
+      const freshToken = await getValidAccessToken();
+      if (freshToken) {
+        await signInToFirebaseWithSpotify(freshToken);
+      }
 
       // Get or create user in Firebase
       let firebaseUser = await getUser(spotifyUser.id);
-      
+
       if (!firebaseUser) {
         // Create new user
         const newUser: User = {
