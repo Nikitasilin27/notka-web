@@ -1,6 +1,8 @@
 // User types - совместимы с iOS приложением
 export interface User {
-  odl: string; // Spotify ID (document ID)
+  odl: string; // Spotify ID (document ID) — legacy-имя ключа, == uid
+  uid?: string; // Канонический Firebase Auth UID (== Spotify ID). Бэкфилл миграцией.
+  spotifyId?: string; // Spotify ID как поле (== uid). Бэкфилл миграцией.
   name: string;
   avatarURL?: string;
   bio?: string;
@@ -25,8 +27,9 @@ export interface CurrentTrack {
 // Scrobble - совместим с iOS (используем их имена полей)
 export interface Scrobble {
   id: string;
-  odl: string;           // Spotify ID (для веба)
-  userId?: string;       // Firebase Auth UID (для iOS)
+  uid?: string;          // Канонический Firebase Auth UID (== odl == userId). Бэкфилл миграцией.
+  odl: string;           // Spotify ID (для веба) — legacy, == uid
+  userId?: string;       // Firebase Auth UID (для iOS) — == uid
   trackId?: string;
   artistId?: string;     // Spotify Artist ID for accurate image fetching
   title: string;         // iOS использует title

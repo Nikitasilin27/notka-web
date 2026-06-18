@@ -30,6 +30,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,scss}\"",
     "typecheck": "tsc --noEmit",
+    "migrate": "node scripts/migrate-odl-to-uid.js",
     "prepare": "husky",
     "ci": "npm run typecheck && npm run lint && npm run test:run && npm run build"
   },
@@ -68,6 +69,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "firebase-admin": "^13.0.0",
     "globals": "^17.1.0",
     "husky": "^9.1.7",
     "jsdom": "^27.4.0",
