@@ -7,6 +7,7 @@ import { ThemeContextProvider, useTheme } from './hooks/useTheme';
 import { I18nProvider } from './hooks/useI18n';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppLayout } from './components/AppLayout';
+import { PwaManager } from './components/PwaManager';
 import { LoginPage } from './pages/LoginPage';
 import { CallbackPage } from './pages/CallbackPage';
 import { FeedPage } from './pages/FeedPage';
@@ -17,8 +18,6 @@ import { SettingsPage } from './pages/SettingsPage';
 // Custom theme - must be imported AFTER Gravity UI
 import './styles/theme.css';
 import './styles/error-boundary.css';
-
-
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -59,13 +58,13 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route 
-        path="/login" 
+      <Route
+        path="/login"
         element={
           <PublicRoute>
             <LoginPage />
           </PublicRoute>
-        } 
+        }
       />
       <Route path="/callback" element={<CallbackPage />} />
       <Route
@@ -129,6 +128,7 @@ function ThemedApp() {
     <ThemeProvider theme={theme}>
       <ToasterProvider toaster={toaster}>
         <ToasterComponent />
+        <PwaManager />
         <BrowserRouter>
           <AuthProvider>
             <AppRoutes />

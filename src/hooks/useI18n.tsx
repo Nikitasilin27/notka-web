@@ -9,7 +9,7 @@ interface Translations {
   listeners: string;
   profile: string;
   logout: string;
-  
+
   // Feed
   nowPlaying: string;
   allScrobbles: string;
@@ -17,14 +17,14 @@ interface Translations {
   noScrobbles: string;
   noFollowingScrobbles: string;
   followSomeone: string;
-  
+
   // Users
   listenersTitle: string;
   noListeners: string;
   inviteFriends: string;
   sendLink: string;
   offline: string;
-  
+
   // Profile
   scrobbles: string;
   artists: string;
@@ -44,17 +44,17 @@ interface Translations {
   topAlbums: string;
   noLikedTracks: string;
   searchTracks: string;
-  
+
   // Time
   justNow: string;
   minAgo: string;
   hAgo: string;
   dAgo: string;
-  
+
   // Languages
   russian: string;
   english: string;
-  
+
   // Login page
   loginSubtitle: string;
   signInSpotify: string;
@@ -68,6 +68,15 @@ interface Translations {
   liked: string;
   failedToLike: string;
   failedToUnlike: string;
+
+  // PWA
+  installTitle: string;
+  installBody: string;
+  installButton: string;
+  installIosHint: string;
+  later: string;
+  updateAvailable: string;
+  updateAction: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -78,7 +87,7 @@ const translations: Record<Language, Translations> = {
     listeners: 'Слушатели',
     profile: 'Профиль',
     logout: 'Выйти',
-    
+
     // Feed
     nowPlaying: 'Сейчас играет',
     allScrobbles: 'Все',
@@ -86,14 +95,14 @@ const translations: Record<Language, Translations> = {
     noScrobbles: 'Пока нет скробблов',
     noFollowingScrobbles: 'Нет скробблов от подписок',
     followSomeone: 'Подпишись на кого-нибудь в разделе "Слушатели"',
-    
+
     // Users
     listenersTitle: 'Слушатели',
     noListeners: 'Пока никого нет. Пригласи друзей!',
     inviteFriends: 'Пригласи друзей!',
     sendLink: 'Отправь им ссылку',
     offline: 'Не в сети',
-    
+
     // Profile
     scrobbles: 'скробблов',
     artists: 'исполнителей',
@@ -113,30 +122,42 @@ const translations: Record<Language, Translations> = {
     topAlbums: 'Топ альбомов',
     noLikedTracks: 'Нет понравившихся треков',
     searchTracks: 'Поиск треков...',
-    
+
     // Time
     justNow: 'только что',
     minAgo: 'мин назад',
     hAgo: 'ч назад',
     dAgo: 'д назад',
-    
+
     // Languages
     russian: 'Русский',
     english: 'English',
-    
+
     // Login page
-    loginSubtitle: 'Находи единомышленников по музыкальным вкусам, делись скробблами и открывай новую музыку вместе',
+    loginSubtitle:
+      'Находи единомышленников по музыкальным вкусам, делись скробблами и открывай новую музыку вместе',
     signInSpotify: 'Войти со Spotify',
     comingSoon: 'Скоро',
-    loginHint: 'Apple Music и Яндекс Музыка в разработке. Вход через Spotify недоступен из России без VPN.',
+    loginHint:
+      'Apple Music и Яндекс Музыка в разработке. Вход через Spotify недоступен из России без VPN.',
 
     // Toasts/Notifications
     errorOccurred: 'Произошла ошибка',
     somethingWrong: 'Что-то пошло не так. Пожалуйста, обнови страницу.',
-    welcomeToNotka: 'Добро пожаловать в Notka! 🎵 Включи музыку в Spotify, чтобы начать скробблинг.',
+    welcomeToNotka:
+      'Добро пожаловать в Notka! 🎵 Включи музыку в Spotify, чтобы начать скробблинг.',
     liked: 'Понравилось!',
     failedToLike: 'Не удалось добавить в избранное',
     failedToUnlike: 'Не удалось убрать из избранного',
+
+    // PWA
+    installTitle: 'Установи Notka',
+    installBody: 'Добавь на главный экран — быстрый запуск и работа офлайн.',
+    installButton: 'Установить',
+    installIosHint: 'Нажми «Поделиться» → «На экран «Домой»».',
+    later: 'Позже',
+    updateAvailable: 'Доступно обновление Notka',
+    updateAction: 'Обновить',
   },
   en: {
     // Navigation
@@ -145,7 +166,7 @@ const translations: Record<Language, Translations> = {
     listeners: 'Listeners',
     profile: 'Profile',
     logout: 'Logout',
-    
+
     // Feed
     nowPlaying: 'Now Playing',
     allScrobbles: 'All',
@@ -153,14 +174,14 @@ const translations: Record<Language, Translations> = {
     noScrobbles: 'No scrobbles yet',
     noFollowingScrobbles: 'No scrobbles from following',
     followSomeone: 'Follow someone in the "Listeners" section',
-    
+
     // Users
     listenersTitle: 'Listeners',
     noListeners: 'No one here yet. Invite friends!',
     inviteFriends: 'Invite friends!',
     sendLink: 'Send them link',
     offline: 'Offline',
-    
+
     // Profile
     scrobbles: 'scrobbles',
     artists: 'artists',
@@ -180,22 +201,24 @@ const translations: Record<Language, Translations> = {
     topAlbums: 'Top Albums',
     noLikedTracks: 'No liked tracks yet',
     searchTracks: 'Search tracks...',
-    
+
     // Time
     justNow: 'just now',
     minAgo: 'min ago',
     hAgo: 'h ago',
     dAgo: 'd ago',
-    
+
     // Languages
     russian: 'Русский',
     english: 'English',
-    
+
     // Login page
-    loginSubtitle: 'Find like-minded music lovers, share scrobbles, and discover new music together',
+    loginSubtitle:
+      'Find like-minded music lovers, share scrobbles, and discover new music together',
     signInSpotify: 'Sign in with Spotify',
     comingSoon: 'Coming soon',
-    loginHint: 'Apple Music and Yandex Music are coming soon. Spotify login is not available from Russia without VPN.',
+    loginHint:
+      'Apple Music and Yandex Music are coming soon. Spotify login is not available from Russia without VPN.',
 
     // Toasts/Notifications
     errorOccurred: 'An error occurred',
@@ -204,7 +227,16 @@ const translations: Record<Language, Translations> = {
     liked: 'Liked!',
     failedToLike: 'Failed to like',
     failedToUnlike: 'Failed to unlike',
-  }
+
+    // PWA
+    installTitle: 'Install Notka',
+    installBody: 'Add it to your home screen for quick launch and offline use.',
+    installButton: 'Install',
+    installIosHint: 'Tap Share → Add to Home Screen.',
+    later: 'Later',
+    updateAvailable: 'A new version of Notka is available',
+    updateAction: 'Reload',
+  },
 };
 
 interface I18nContextType {
@@ -228,11 +260,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t = translations[lang];
 
-  return (
-    <I18nContext.Provider value={{ lang, setLang, t }}>
-      {children}
-    </I18nContext.Provider>
-  );
+  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {
